@@ -5,15 +5,18 @@ async function openMeet(driver: WebDriver) {
   
   try {
     await driver.get('https://meet.google.com/goz-yohn-tqi');
-    ​​const popupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
-    await popupButton.click()
+    ​​const firstPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
+    await firstPopupButton.click();
     ​​const nameInput = await driver.wait(until.elementLocated(By.xpath('//input[@placeholder="Your name"]')), 10000);
     await nameInput.clear();
     await nameInput.click();
     await nameInput.sendKeys('value', "Meeting bot");
-    await driver.sleep(1000)
+    await driver.sleep(1000);
     ​​const buttonInput = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')), 10000);
-    buttonInput.click();    
+    buttonInput.click();  
+    await driver.sleep(4000);
+    ​const secondPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
+    await secondPopupButton.click()  
   } finally {
 
   }
@@ -36,20 +39,7 @@ async function getDriver() {
     let driver = await new Builder().forBrowser(Browser.CHROME).setChromeOptions(options).build()
     return driver;
 }
-async function handleSafetyPopup(driver: WebDriver) {
-    try {
-      console.log("Checking for the safety pop-up...");
-      const gotItButton = await driver.wait(
-        until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')),
-        5000 // Shorter wait since the pop-up appears after recording starts
-      );
-      await gotItButton.click();
-      console.log("Safety pop-up dismissed.");
-    } catch (error) {
-      console.warn("Safety pop-up not found or already dismissed.");
-    }
-  }
-  
+
 async function startScreenshare(driver: WebDriver) {
     console.log("startScreensharecalled")
     const response = await driver.executeScript(`
@@ -121,12 +111,7 @@ async function startScreenshare(driver: WebDriver) {
               ...screenStream.getVideoTracks(),
               ...dest.stream.getAudioTracks()
           ]);
-          navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: "browser" },
-          audio: true
-      }).then(stream => {
-          console.log("Screen recording started...");
-      });
+          
           console.log("before start recording")
           const recordedChunks = await startRecording(combinedStream, 10000);
           console.log("after start recording")
@@ -151,13 +136,8 @@ async function startScreenshare(driver: WebDriver) {
         
     `)
 
-     // Check for the "Got it" pop-up after a delay
-  await driver.sleep(3000); // Delay for the pop-up to appear
-  await handleSafetyPopup(driver);
-
-  // Keep recording logic intact
-  await driver.sleep(10000); // Simulate recording time
-  console.log("Recording complete.");
+    console.log(response)
+    driver.sleep(1000000)
 }
 
 async function main() {

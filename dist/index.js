@@ -15,8 +15,8 @@ function openMeet(driver) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             yield driver.get('https://meet.google.com/goz-yohn-tqi');
-            const popupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
-            yield popupButton.click();
+            const firstPopupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
+            yield firstPopupButton.click();
             const nameInput = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//input[@placeholder="Your name"]')), 10000);
             yield nameInput.clear();
             yield nameInput.click();
@@ -24,6 +24,9 @@ function openMeet(driver) {
             yield driver.sleep(1000);
             const buttonInput = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Ask to join")]')), 10000);
             buttonInput.click();
+            yield driver.sleep(4000);
+            const secondPopupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
+            yield secondPopupButton.click();
         }
         finally {
         }
@@ -43,20 +46,6 @@ function getDriver() {
         // ​​--allow-file-access-from-files--use-fake-device-for-media-stream--allow-running-insecure-content--allow-file-access-from-files--use-fake-device-for-media-stream--allow-running-insecure-content
         let driver = yield new selenium_webdriver_1.Builder().forBrowser(selenium_webdriver_1.Browser.CHROME).setChromeOptions(options).build();
         return driver;
-    });
-}
-function handleSafetyPopup(driver) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            console.log("Checking for the safety pop-up...");
-            const gotItButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 5000 // Shorter wait since the pop-up appears after recording starts
-            );
-            yield gotItButton.click();
-            console.log("Safety pop-up dismissed.");
-        }
-        catch (error) {
-            console.warn("Safety pop-up not found or already dismissed.");
-        }
     });
 }
 function startScreenshare(driver) {
@@ -131,12 +120,7 @@ function startScreenshare(driver) {
               ...screenStream.getVideoTracks(),
               ...dest.stream.getAudioTracks()
           ]);
-          navigator.mediaDevices.getDisplayMedia({
-          video: { displaySurface: "browser" },
-          audio: true
-      }).then(stream => {
-          console.log("Screen recording started...");
-      });
+          
           console.log("before start recording")
           const recordedChunks = await startRecording(combinedStream, 10000);
           console.log("after start recording")
@@ -160,12 +144,8 @@ function startScreenshare(driver) {
         })
         
     `);
-        // Check for the "Got it" pop-up after a delay
-        yield driver.sleep(3000); // Delay for the pop-up to appear
-        yield handleSafetyPopup(driver);
-        // Keep recording logic intact
-        yield driver.sleep(10000); // Simulate recording time
-        console.log("Recording complete.");
+        console.log(response);
+        driver.sleep(1000000);
     });
 }
 function main() {
