@@ -14,7 +14,7 @@ const chrome_1 = require("selenium-webdriver/chrome");
 function openMeet(driver) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield driver.get('https://meet.google.com/goz-yohn-tqi');
+            yield driver.get('https://meet.google.com/fji-eooj-qaf');
             const firstPopupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
             yield firstPopupButton.click();
             const nameInput = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//input[@placeholder="Your name"]')), 10000);
@@ -27,6 +27,20 @@ function openMeet(driver) {
             yield driver.sleep(4000);
             const secondPopupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
             yield secondPopupButton.click();
+            const ccButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.css('button[jsname="r8qRAd"]')), 10000);
+            yield ccButton.click();
+            console.log("Closed Captions activated");
+            // Wait briefly for captions to appear
+            yield driver.sleep(5000);
+            // Log the text of the target elements
+            const captionsText = yield driver.executeScript(`
+        const div1 = document.querySelector('div.KcIKyf.jxFHg')?.textContent || 'Not found';
+        const div2 = document.querySelector('div[jsname="tgaKEf"] span')?.textContent || 'Not found';
+        return { div1, div2 };
+    `);
+            console.log("Captured Divs:");
+            console.log("Div 1:", captionsText); // "You"
+            console.log("Div 2:", captionsText); // "Hello."
         }
         finally {
         }

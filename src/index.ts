@@ -4,7 +4,7 @@ import { Options } from 'selenium-webdriver/chrome'
 async function openMeet(driver: WebDriver) {
   
   try {
-    await driver.get('https://meet.google.com/goz-yohn-tqi');
+    await driver.get('https://meet.google.com/fji-eooj-qaf');
     ​​const firstPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
     await firstPopupButton.click();
     ​​const nameInput = await driver.wait(until.elementLocated(By.xpath('//input[@placeholder="Your name"]')), 10000);
@@ -17,6 +17,24 @@ async function openMeet(driver: WebDriver) {
     await driver.sleep(4000);
     ​const secondPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
     await secondPopupButton.click()  
+    const ccButton = await driver.wait(
+        until.elementLocated(By.css('button[jsname="r8qRAd"]')),
+        10000
+    );
+    await ccButton.click();
+    console.log("Closed Captions activated");
+    // Wait briefly for captions to appear
+    await driver.sleep(5000);
+
+    // Log the text of the target elements
+    const captionsText = await driver.executeScript(`
+        const div1 = document.querySelector('div.KcIKyf.jxFHg')?.textContent || 'Not found';
+        const div2 = document.querySelector('div[jsname="tgaKEf"] span')?.textContent || 'Not found';
+        return { div1, div2 };
+    `);
+
+    console.log("Captured Divs:");
+    console.log("Div 1:", captionsText); 
   } finally {
 
   }
