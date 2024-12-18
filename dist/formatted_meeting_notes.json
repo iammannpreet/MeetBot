@@ -8,20 +8,12 @@
         "text": ""
       },
       {
-        "speaker": "You",
-        "text": "Hello."
-      },
-      {
-        "speaker": "You",
-        "text": "Hello, hello."
-      },
-      {
         "speaker": "Mann Preet",
-        "text": "How are you?"
+        "text": "Our."
       },
       {
-        "speaker": "You",
-        "text": "Not look great."
+        "speaker": "Silence",
+        "text": ""
       }
     ]
   }
