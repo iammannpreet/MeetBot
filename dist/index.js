@@ -52,6 +52,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.main = main;
 const selenium_webdriver_1 = require("selenium-webdriver");
 const chrome_1 = require("selenium-webdriver/chrome");
 const fs_1 = __importDefault(require("fs"));
@@ -254,19 +255,19 @@ function getDriver() {
         return driver;
     });
 }
-function main() {
+function main(meetLink) {
     return __awaiter(this, void 0, void 0, function* () {
         const driver = yield getDriver();
         // Step 1: Open Google Meet
         yield openMeet(driver);
         // Allow captions to run for a while
         yield new Promise((resolve) => setTimeout(resolve, 20000));
+        // Step 4: Start screen share
+        yield startScreenshare(driver);
         // Step 2: Save logs to JSON
         const filePath = yield saveLogsToJson(driver);
         // Step 3: Summarize meeting notes
         yield summarizeMeetingNotes(filePath);
-        // Step 4: Start screen share
-        yield startScreenshare(driver);
     });
 }
-main();
+;

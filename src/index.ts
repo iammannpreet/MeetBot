@@ -192,7 +192,7 @@ async function startScreenshare(driver: WebDriver) {
   driver.sleep(10000);
 }
 
-async function getDriver() {
+async function getDriver(): Promise<WebDriver> {
   const options = new Options();
   options.addArguments('--disable-blink-features=AutomationControlled');
   options.addArguments('--use-fake-ui-for-media-stream');
@@ -206,7 +206,7 @@ async function getDriver() {
   return driver;
 }
 
-async function main() {
+export async function main(meetLink: string) {
     const driver = await getDriver();
   
     // Step 1: Open Google Meet
@@ -215,15 +215,13 @@ async function main() {
     // Allow captions to run for a while
     await new Promise((resolve) => setTimeout(resolve, 20000));
   
+    // Step 4: Start screen share
+    await startScreenshare(driver);
+  
     // Step 2: Save logs to JSON
     const filePath = await saveLogsToJson(driver);
   
     // Step 3: Summarize meeting notes
     await summarizeMeetingNotes(filePath);
-  
-    // Step 4: Start screen share
-    await startScreenshare(driver);
   }
-  
-
-main();
+  ;
