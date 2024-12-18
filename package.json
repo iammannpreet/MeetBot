@@ -11,10 +11,15 @@
   "description": "",
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
-    "@types/selenium-webdriver": "^4.1.27",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "selenium-webdriver": "^4.27.0",
     "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "@types/selenium-webdriver": "^4.1.27"
   }
 }
