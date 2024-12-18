@@ -8,6 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -16,6 +23,9 @@ const selenium_webdriver_1 = require("selenium-webdriver");
 const chrome_1 = require("selenium-webdriver/chrome");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const inference_1 = require("@huggingface/inference");
+// Initialize Hugging Face Client
+const client = new inference_1.HfInference("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");
 let lastLoggedText = null;
 const logs = []; // To store logs
 function openMeet(driver) {
@@ -66,21 +76,73 @@ function openMeet(driver) {
 }
 function saveLogsToJson(driver) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Save logs to a JSON file
-        const filePath = path_1.default.join(__dirname, 'captions_logs.json');
-        fs_1.default.writeFileSync(filePath, JSON.stringify(logs, null, 2), 'utf8');
-        console.log('Logs saved to captions_logs.json');
-        // Trigger file download
-        const fileContent = fs_1.default.readFileSync(filePath, 'utf8');
-        yield driver.executeScript(`
-    const blob = new Blob([arguments[0]], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'captions_logs.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  `, fileContent);
+        const filePath = path_1.default.join(__dirname, 'formatted_meeting_notes.json');
+        // Step 1: Transform the logs to the required format
+        const meetingNotes = {
+            prompt: "Summarize the following meeting notes, ignore Silence and identify action items:",
+            meeting_notes: {
+                date: new Date().toISOString().split('T')[0], // Capture current system date (YYYY-MM-DD)
+                content: logs
+                    .filter((log) => log.combined.includes(":")) // Exclude empty or malformed entries
+                    .map((log) => {
+                    const [speaker, ...textParts] = log.combined.split(":");
+                    const text = textParts.join(":").trim();
+                    return {
+                        speaker: speaker.trim() || "Silence", // Fallback for missing speaker
+                        text: text || "", // Ensure no undefined text
+                    };
+                }),
+            },
+        };
+        // Step 2: Write the transformed data to a JSON file
+        fs_1.default.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
+        console.log('Logs saved to formatted_meeting_notes.json');
+        return filePath; // Return the path of the saved file
+    });
+}
+function summarizeMeetingNotes(filePath) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, e_1, _b, _c;
+        try {
+            // Step 1: Read the JSON file
+            const data = JSON.parse(fs_1.default.readFileSync(filePath, 'utf8'));
+            // Step 2: Send to Hugging Face for Summarization
+            console.log('Sending meeting notes to Hugging Face for summarization...');
+            const stream = client.chatCompletionStream({
+                model: "01-ai/Yi-1.5-34B-Chat",
+                messages: [
+                    { role: "user", content: JSON.stringify(data) }
+                ],
+                temperature: 0.5,
+                max_tokens: 2048,
+                top_p: 0.7
+            });
+            // Step 3: Stream the response
+            let summary = '';
+            try {
+                for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
+                    _c = stream_1_1.value;
+                    _d = false;
+                    const chunk = _c;
+                    if (chunk.choices && chunk.choices.length > 0) {
+                        const newContent = chunk.choices[0].delta.content;
+                        summary += newContent;
+                        console.log(newContent); // Stream summary in real-time
+                    }
+                }
+            }
+            catch (e_1_1) { e_1 = { error: e_1_1 }; }
+            finally {
+                try {
+                    if (!_d && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
+                }
+                finally { if (e_1) throw e_1.error; }
+            }
+            console.log('Final Summary:', summary);
+        }
+        catch (error) {
+            console.error('Error summarizing meeting notes:', error.message);
+        }
     });
 }
 function startScreenshare(driver) {
@@ -160,11 +222,15 @@ function getDriver() {
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         const driver = yield getDriver();
+        // Step 1: Open Google Meet
         yield openMeet(driver);
         // Allow captions to run for a while
         yield new Promise((resolve) => setTimeout(resolve, 20000));
-        // Save logs and start screen share
-        yield saveLogsToJson(driver);
+        // Step 2: Save logs to JSON
+        const filePath = yield saveLogsToJson(driver);
+        // Step 3: Summarize meeting notes
+        yield summarizeMeetingNotes(filePath);
+        // Step 4: Start screen share
         yield startScreenshare(driver);
     });
 }

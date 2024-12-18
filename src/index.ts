@@ -2,6 +2,9 @@ import { Builder, Browser, By, until, WebDriver } from 'selenium-webdriver';
 import { Options } from 'selenium-webdriver/chrome';
 import fs from 'fs';
 import path from 'path';
+import { HfInference } from "@huggingface/inference";
+// Initialize Hugging Face Client
+const client = new HfInference("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");
 
 let lastLoggedText: string | null = null;
 const logs: { timestamp: string; combined: string }[] = []; // To store logs
@@ -64,24 +67,65 @@ async function openMeet(driver: WebDriver) {
 }
 
 async function saveLogsToJson(driver: WebDriver) {
-  // Save logs to a JSON file
-  const filePath = path.join(__dirname, 'captions_logs.json');
-  fs.writeFileSync(filePath, JSON.stringify(logs, null, 2), 'utf8');
-
-  console.log('Logs saved to captions_logs.json');
-
-  // Trigger file download
-  const fileContent = fs.readFileSync(filePath, 'utf8');
-  await driver.executeScript(`
-    const blob = new Blob([arguments[0]], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'captions_logs.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  `, fileContent);
-}
+    const filePath = path.join(__dirname, 'formatted_meeting_notes.json');
+  
+    // Step 1: Transform the logs to the required format
+    const meetingNotes = {
+      prompt: "Summarize the following meeting notes, ignore Silence and identify action items:",
+      meeting_notes: {
+        date: new Date().toISOString().split('T')[0], // Capture current system date (YYYY-MM-DD)
+        content: logs
+          .filter((log) => log.combined.includes(":")) // Exclude empty or malformed entries
+          .map((log) => {
+            const [speaker, ...textParts] = log.combined.split(":");
+            const text = textParts.join(":").trim();
+            return {
+              speaker: speaker.trim() || "Silence", // Fallback for missing speaker
+              text: text || "", // Ensure no undefined text
+            };
+          }),
+      },
+    };
+  
+    // Step 2: Write the transformed data to a JSON file
+    fs.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
+    console.log('Logs saved to formatted_meeting_notes.json');
+  
+    return filePath; // Return the path of the saved file
+  }
+  
+  async function summarizeMeetingNotes(filePath: string) {
+    try {
+      // Step 1: Read the JSON file
+      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  
+      // Step 2: Send to Hugging Face for Summarization
+      console.log('Sending meeting notes to Hugging Face for summarization...');
+      const stream = client.chatCompletionStream({
+        model: "01-ai/Yi-1.5-34B-Chat",
+        messages: [
+          { role: "user", content: JSON.stringify(data) }
+        ],
+        temperature: 0.5,
+        max_tokens: 2048,
+        top_p: 0.7
+      });
+  
+      // Step 3: Stream the response
+      let summary = '';
+      for await (const chunk of stream) {
+        if (chunk.choices && chunk.choices.length > 0) {
+          const newContent = chunk.choices[0].delta.content;
+          summary += newContent;
+          console.log(newContent); // Stream summary in real-time
+        }
+      }
+  
+      console.log('Final Summary:', summary);
+    } catch (error) {
+      console.error('Error summarizing meeting notes:', (error as Error).message);
+    }
+  }
 
 async function startScreenshare(driver: WebDriver) {
   console.log('Starting screen share...');
@@ -159,15 +203,23 @@ async function getDriver() {
 }
 
 async function main() {
-  const driver = await getDriver();
-  await openMeet(driver);
-
-  // Allow captions to run for a while
-  await new Promise((resolve) => setTimeout(resolve, 20000));
-
-  // Save logs and start screen share
-  await saveLogsToJson(driver);
-  await startScreenshare(driver);
-}
+    const driver = await getDriver();
+  
+    // Step 1: Open Google Meet
+    await openMeet(driver);
+  
+    // Allow captions to run for a while
+    await new Promise((resolve) => setTimeout(resolve, 20000));
+  
+    // Step 2: Save logs to JSON
+    const filePath = await saveLogsToJson(driver);
+  
+    // Step 3: Summarize meeting notes
+    await summarizeMeetingNotes(filePath);
+  
+    // Step 4: Start screen share
+    await startScreenshare(driver);
+  }
+  
 
 main();

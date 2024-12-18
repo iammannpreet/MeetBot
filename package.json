@@ -10,7 +10,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@huggingface/inference": "^2.8.1",
     "@types/selenium-webdriver": "^4.1.27",
+    "axios": "^1.7.9",
     "selenium-webdriver": "^4.27.0",
     "typescript": "^5.7.2"
   }
