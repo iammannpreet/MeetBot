@@ -2,9 +2,13 @@ import { Builder, Browser, By, until, WebDriver } from 'selenium-webdriver';
 import { Options } from 'selenium-webdriver/chrome';
 import fs from 'fs';
 import path from 'path';
-import { HfInference } from "@huggingface/inference";
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+import { HfInference } from '@huggingface/inference';
+
 // Initialize Hugging Face Client
-const client = new HfInference("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");
+const client = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
 
 let lastLoggedText: string | null = null;
 const logs: { timestamp: string; combined: string }[] = []; // To store logs
