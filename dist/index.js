@@ -64,10 +64,10 @@ const inference_1 = require("@huggingface/inference");
 const client = new inference_1.HfInference(process.env.HUGGINGFACE_API_KEY);
 let lastLoggedText = null;
 const logs = []; // To store logs
-function openMeet(driver) {
+function openMeet(driver, meetLink) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            yield driver.get('https://meet.google.com/fji-eooj-qaf');
+            yield driver.get(meetLink); // Use the dynamic meetLink
             // Handle popups and name input
             const firstPopupButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.xpath('//span[contains(text(), "Got it")]')), 10000);
             yield firstPopupButton.click();
@@ -131,8 +131,13 @@ function saveLogsToJson(driver) {
             },
         };
         // Step 2: Write the transformed data to a JSON file
-        fs_1.default.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
-        console.log('Logs saved to formatted_meeting_notes.json');
+        try {
+            fs_1.default.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
+            console.log('Logs saved to formatted_meeting_notes.json');
+        }
+        catch (error) {
+            console.error('Error saving logs to JSON file:', error);
+        }
         return filePath; // Return the path of the saved file
     });
 }
@@ -259,15 +264,15 @@ function main(meetLink) {
     return __awaiter(this, void 0, void 0, function* () {
         const driver = yield getDriver();
         // Step 1: Open Google Meet
-        yield openMeet(driver);
+        yield openMeet(driver, meetLink);
         // Allow captions to run for a while
         yield new Promise((resolve) => setTimeout(resolve, 20000));
-        // Step 4: Start screen share
-        yield startScreenshare(driver);
         // Step 2: Save logs to JSON
         const filePath = yield saveLogsToJson(driver);
         // Step 3: Summarize meeting notes
         yield summarizeMeetingNotes(filePath);
+        // Step 4: Start screen share
+        yield startScreenshare(driver);
     });
 }
 ;

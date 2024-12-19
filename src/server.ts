@@ -1,12 +1,13 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import { main } from './index'; // Import the main function from index.ts
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 

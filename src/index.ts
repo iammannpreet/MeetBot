@@ -18,10 +18,10 @@ interface CaptionsText {
   div2: string;
 }
 
-async function openMeet(driver: WebDriver) {
+async function openMeet(driver: WebDriver, meetLink: string) {
   try {
-    await driver.get('https://meet.google.com/fji-eooj-qaf');
-
+    await driver.get(meetLink); // Use the dynamic meetLink
+    
     // Handle popups and name input
     const firstPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
     await firstPopupButton.click();
@@ -43,7 +43,7 @@ async function openMeet(driver: WebDriver) {
     const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
     await ccButton.click();
     console.log('Closed Captions activated');
-
+  
     // Start monitoring captions
     console.log('Monitoring captions...');
     setInterval(async () => {
@@ -70,34 +70,38 @@ async function openMeet(driver: WebDriver) {
   }
 }
 
+
 async function saveLogsToJson(driver: WebDriver) {
-    const filePath = path.join(__dirname, 'formatted_meeting_notes.json');
-  
-    // Step 1: Transform the logs to the required format
-    const meetingNotes = {
-      prompt: "Summarize the following meeting notes, ignore Silence and identify action items:",
-      meeting_notes: {
-        date: new Date().toISOString().split('T')[0], // Capture current system date (YYYY-MM-DD)
-        content: logs
-          .filter((log) => log.combined.includes(":")) // Exclude empty or malformed entries
-          .map((log) => {
-            const [speaker, ...textParts] = log.combined.split(":");
-            const text = textParts.join(":").trim();
-            return {
-              speaker: speaker.trim() || "Silence", // Fallback for missing speaker
-              text: text || "", // Ensure no undefined text
-            };
-          }),
-      },
-    };
-  
-    // Step 2: Write the transformed data to a JSON file
+  const filePath = path.join(__dirname, 'formatted_meeting_notes.json');
+
+  // Step 1: Transform the logs to the required format
+  const meetingNotes = {
+    prompt: "Summarize the following meeting notes, ignore Silence and identify action items:",
+    meeting_notes: {
+      date: new Date().toISOString().split('T')[0], // Capture current system date (YYYY-MM-DD)
+      content: logs
+        .filter((log) => log.combined.includes(":")) // Exclude empty or malformed entries
+        .map((log) => {
+          const [speaker, ...textParts] = log.combined.split(":");
+          const text = textParts.join(":").trim();
+          return {
+            speaker: speaker.trim() || "Silence", // Fallback for missing speaker
+            text: text || "", // Ensure no undefined text
+          };
+        }),
+    },
+  };
+
+  // Step 2: Write the transformed data to a JSON file
+  try {
     fs.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
     console.log('Logs saved to formatted_meeting_notes.json');
-  
-    return filePath; // Return the path of the saved file
+  } catch (error) {
+    console.error('Error saving logs to JSON file:', error);
   }
-  
+
+  return filePath; // Return the path of the saved file
+}
   async function summarizeMeetingNotes(filePath: string) {
     try {
       // Step 1: Read the JSON file
@@ -210,18 +214,17 @@ export async function main(meetLink: string) {
     const driver = await getDriver();
   
     // Step 1: Open Google Meet
-    await openMeet(driver);
+    await openMeet(driver , meetLink);
   
     // Allow captions to run for a while
     await new Promise((resolve) => setTimeout(resolve, 20000));
-  
-    // Step 4: Start screen share
-    await startScreenshare(driver);
   
     // Step 2: Save logs to JSON
     const filePath = await saveLogsToJson(driver);
   
     // Step 3: Summarize meeting notes
     await summarizeMeetingNotes(filePath);
+    // Step 4: Start screen share
+    await startScreenshare(driver);
   }
   ;
