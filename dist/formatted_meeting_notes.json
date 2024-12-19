@@ -1,36 +1,7 @@
 {
   "prompt": "Summarize the following meeting notes, ignore Silence and identify action items:",
   "meeting_notes": {
-    "date": "2024-12-18",
-    "content": [
-      {
-        "speaker": "Silence",
-        "text": ""
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": "Hello."
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": ""
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": "Hello, hello."
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": "How?"
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": "How are you?"
-      },
-      {
-        "speaker": "You",
-        "text": "How are you?"
-      }
-    ]
+    "date": "2024-12-19",
+    "content": []
   }
 }
