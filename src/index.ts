@@ -1,6 +1,5 @@
 import { Builder, Browser, By, until, WebDriver } from 'selenium-webdriver';
 import { Options } from 'selenium-webdriver/chrome';
-
 import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
@@ -44,6 +43,28 @@ async function openMeet(driver: WebDriver, meetLink: string) {
     const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
     await ccButton.click();
     console.log('Closed Captions activated');
+  
+    // Start monitoring captions
+    console.log('Monitoring captions...');
+    setInterval(async () => {
+      const captionsText = await driver.executeScript((): CaptionsText => {
+        const div1 = document.querySelector('div.KcIKyf.jxFHg')?.textContent || '';
+        const div2 = document.querySelector('div[jsname="tgaKEf"] span')?.textContent || '';
+        return { div1, div2 };
+      }) as CaptionsText;
+
+      const combinedText = `${captionsText.div1}: ${captionsText.div2}`.trim();
+
+      if (combinedText && combinedText !== lastLoggedText) {
+        const timestamp = new Date().toISOString();
+        console.log('Captured Divs:');
+        console.log('Combined:', combinedText);
+
+        // Add to logs array
+        logs.push({ timestamp, combined: combinedText });
+        lastLoggedText = combinedText;
+      }
+    }, 500);
   } catch (error) {
     console.error('Error in openMeet function:', error);
   }

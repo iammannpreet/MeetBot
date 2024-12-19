@@ -85,6 +85,25 @@ function openMeet(driver, meetLink) {
             const ccButton = yield driver.wait(selenium_webdriver_1.until.elementLocated(selenium_webdriver_1.By.css('button[jsname="r8qRAd"]')), 10000);
             yield ccButton.click();
             console.log('Closed Captions activated');
+            // Start monitoring captions
+            console.log('Monitoring captions...');
+            setInterval(() => __awaiter(this, void 0, void 0, function* () {
+                const captionsText = yield driver.executeScript(() => {
+                    var _a, _b;
+                    const div1 = ((_a = document.querySelector('div.KcIKyf.jxFHg')) === null || _a === void 0 ? void 0 : _a.textContent) || '';
+                    const div2 = ((_b = document.querySelector('div[jsname="tgaKEf"] span')) === null || _b === void 0 ? void 0 : _b.textContent) || '';
+                    return { div1, div2 };
+                });
+                const combinedText = `${captionsText.div1}: ${captionsText.div2}`.trim();
+                if (combinedText && combinedText !== lastLoggedText) {
+                    const timestamp = new Date().toISOString();
+                    console.log('Captured Divs:');
+                    console.log('Combined:', combinedText);
+                    // Add to logs array
+                    logs.push({ timestamp, combined: combinedText });
+                    lastLoggedText = combinedText;
+                }
+            }), 500);
         }
         catch (error) {
             console.error('Error in openMeet function:', error);
