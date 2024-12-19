@@ -141,24 +141,19 @@ function saveLogsToJson(driver) {
         return filePath; // Return the path of the saved file
     });
 }
-function summarizeMeetingNotes(filePath) {
+function summarizeMeetingNotes(filePath, logCallback) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, e_1, _b, _c;
         try {
-            // Step 1: Read the JSON file
             const data = JSON.parse(fs_1.default.readFileSync(filePath, 'utf8'));
-            // Step 2: Send to Hugging Face for Summarization
             console.log('Sending meeting notes to Hugging Face for summarization...');
             const stream = client.chatCompletionStream({
                 model: "01-ai/Yi-1.5-34B-Chat",
-                messages: [
-                    { role: "user", content: JSON.stringify(data) }
-                ],
+                messages: [{ role: "user", content: JSON.stringify(data) }],
                 temperature: 0.5,
                 max_tokens: 2048,
-                top_p: 0.7
+                top_p: 0.7,
             });
-            // Step 3: Stream the response
             let summary = '';
             try {
                 for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
@@ -168,7 +163,8 @@ function summarizeMeetingNotes(filePath) {
                     if (chunk.choices && chunk.choices.length > 0) {
                         const newContent = chunk.choices[0].delta.content;
                         summary += newContent;
-                        console.log(newContent); // Stream summary in real-time
+                        console.log(newContent); // Log to console
+                        logCallback(newContent); // Send log via callback
                     }
                 }
             }
@@ -260,18 +256,12 @@ function getDriver() {
         return driver;
     });
 }
-function main(meetLink) {
+function main(meetLink, logCallback) {
     return __awaiter(this, void 0, void 0, function* () {
         const driver = yield getDriver();
-        // Step 1: Open Google Meet
         yield openMeet(driver, meetLink);
-        // Allow captions to run for a while
-        yield new Promise((resolve) => setTimeout(resolve, 20000));
-        // Step 2: Save logs to JSON
         const filePath = yield saveLogsToJson(driver);
-        // Step 3: Summarize meeting notes
-        yield summarizeMeetingNotes(filePath);
-        // Step 4: Start screen share
+        yield summarizeMeetingNotes(filePath, logCallback);
         yield startScreenshare(driver);
     });
 }

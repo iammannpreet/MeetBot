@@ -102,38 +102,35 @@ async function saveLogsToJson(driver: WebDriver) {
 
   return filePath; // Return the path of the saved file
 }
-  async function summarizeMeetingNotes(filePath: string) {
-    try {
-      // Step 1: Read the JSON file
-      const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  
-      // Step 2: Send to Hugging Face for Summarization
-      console.log('Sending meeting notes to Hugging Face for summarization...');
-      const stream = client.chatCompletionStream({
-        model: "01-ai/Yi-1.5-34B-Chat",
-        messages: [
-          { role: "user", content: JSON.stringify(data) }
-        ],
-        temperature: 0.5,
-        max_tokens: 2048,
-        top_p: 0.7
-      });
-  
-      // Step 3: Stream the response
-      let summary = '';
-      for await (const chunk of stream) {
-        if (chunk.choices && chunk.choices.length > 0) {
-          const newContent = chunk.choices[0].delta.content;
-          summary += newContent;
-          console.log(newContent); // Stream summary in real-time
-        }
+async function summarizeMeetingNotes(filePath: string, logCallback: (log: string) => void) {
+  try {
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+    console.log('Sending meeting notes to Hugging Face for summarization...');
+    const stream = client.chatCompletionStream({
+      model: "01-ai/Yi-1.5-34B-Chat",
+      messages: [{ role: "user", content: JSON.stringify(data) }],
+      temperature: 0.5,
+      max_tokens: 2048,
+      top_p: 0.7,
+    });
+
+    let summary = '';
+    for await (const chunk of stream) {
+      if (chunk.choices && chunk.choices.length > 0) {
+        const newContent = chunk.choices[0].delta.content;
+        summary += newContent;
+
+        console.log(newContent); // Log to console
+        logCallback(newContent); // Send log via callback
       }
-  
-      console.log('Final Summary:', summary);
-    } catch (error) {
-      console.error('Error summarizing meeting notes:', (error as Error).message);
     }
+
+    console.log('Final Summary:', summary);
+  } catch (error) {
+    console.error('Error summarizing meeting notes:', error.message);
   }
+}
 
 async function startScreenshare(driver: WebDriver) {
   console.log('Starting screen share...');
@@ -210,21 +207,14 @@ async function getDriver(): Promise<WebDriver> {
   return driver;
 }
 
-export async function main(meetLink: string) {
-    const driver = await getDriver();
-  
-    // Step 1: Open Google Meet
-    await openMeet(driver , meetLink);
-  
-    // Allow captions to run for a while
-    await new Promise((resolve) => setTimeout(resolve, 20000));
-  
-    // Step 2: Save logs to JSON
-    const filePath = await saveLogsToJson(driver);
-  
-    // Step 3: Summarize meeting notes
-    await summarizeMeetingNotes(filePath);
-    // Step 4: Start screen share
-    await startScreenshare(driver);
-  }
+export async function main(meetLink: string, logCallback: (log: string) => void) {
+  const driver = await getDriver();
+
+  await openMeet(driver, meetLink);
+
+  const filePath = await saveLogsToJson(driver);
+
+  await summarizeMeetingNotes(filePath, logCallback);
+  await startScreenshare(driver);
+}
   ;

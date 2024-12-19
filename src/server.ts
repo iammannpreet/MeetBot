@@ -8,8 +8,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(cors());
-// Middleware to parse JSON bodies
 app.use(express.json());
+
+let sseClients: Response[] = [];
+// SSE endpoint
+app.get('/api/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  // Add client to SSE clients list
+  sseClients.push(res);
+
+  // Remove client on connection close
+  req.on('close', () => {
+    sseClients = sseClients.filter((client) => client !== res);
+  });
+});
 
 app.post('/api/open-meet', async (req, res) => {
   const { meetLink } = req.body;
