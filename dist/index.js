@@ -158,8 +158,10 @@ function summarizeMeetingNotes(filePath) {
                 max_tokens: 2048,
                 top_p: 0.7
             });
-            // Step 3: Stream the response
+            // Step 3: Stream the response and write to a text file
             let summary = '';
+            const outputFilePath = path_1.default.join(__dirname, 'meeting_summary.txt');
+            const writeStream = fs_1.default.createWriteStream(outputFilePath, { flags: 'w' }); // Open file stream
             try {
                 for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
                     _c = stream_1_1.value;
@@ -168,7 +170,7 @@ function summarizeMeetingNotes(filePath) {
                     if (chunk.choices && chunk.choices.length > 0) {
                         const newContent = chunk.choices[0].delta.content;
                         summary += newContent;
-                        console.log(newContent); // Stream summary in real-time
+                        writeStream.write(newContent); // Write streamed content to file
                     }
                 }
             }
@@ -179,7 +181,8 @@ function summarizeMeetingNotes(filePath) {
                 }
                 finally { if (e_1) throw e_1.error; }
             }
-            console.log('Final Summary:', summary);
+            writeStream.end(); // Close the file stream after writing is complete
+            console.log(`Final Summary saved to ${outputFilePath}`);
         }
         catch (error) {
             console.error('Error summarizing meeting notes:', error.message);
