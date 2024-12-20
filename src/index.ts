@@ -135,66 +135,72 @@ async function saveLogsToJson(driver: WebDriver) {
     }
   }
 
-async function startScreenshare(driver: WebDriver) {
-  console.log('Starting screen share...');
-
-  const response = await driver.executeScript(`
-    function wait(delayInMS) {
-      return new Promise((resolve) => setTimeout(resolve, delayInMS));
-    }
-
-    function startRecording(stream, lengthInMS) {
-      let recorder = new MediaRecorder(stream);
-      let data = [];
-      
-      recorder.ondataavailable = (event) => data.push(event.data);
-      recorder.start();
-      
-      let stopped = new Promise((resolve, reject) => {
-        recorder.onstop = resolve;
-        recorder.onerror = (event) => reject(event.name);
+  async function startScreenshare(driver: WebDriver) {
+    console.log('Starting screen share...');
+  
+    await driver.executeScript(`
+      function wait(delayInMS) {
+        return new Promise((resolve) => setTimeout(resolve, delayInMS));
+      }
+  
+      function startRecording(stream, lengthInMS) {
+        let recorder = new MediaRecorder(stream);
+        let data = [];
+        
+        recorder.ondataavailable = (event) => data.push(event.data);
+        recorder.start();
+        
+        let stopped = new Promise((resolve, reject) => {
+          recorder.onstop = resolve;
+          recorder.onerror = (event) => reject(event.name);
+        });
+        
+        let recorded = wait(lengthInMS).then(() => {
+          if (recorder.state === "recording") {
+            recorder.stop();
+          }
+        });
+        
+        return Promise.all([stopped, recorded]).then(() => data);
+      }
+  
+      window.navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" },
+        audio: true,
+        preferCurrentTab: true
+      }).then(async screenStream => {
+        const audioContext = new AudioContext();
+        const screenAudioStream = audioContext.createMediaStreamSource(screenStream);
+  
+        const dest = audioContext.createMediaStreamDestination();
+        screenAudioStream.connect(dest);
+  
+        const combinedStream = new MediaStream([
+          ...screenStream.getVideoTracks(),
+          ...dest.stream.getAudioTracks()
+        ]);
+  
+        const recordedChunks = await startRecording(combinedStream, 10000);
+        let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+  
+        const downloadButton = document.createElement("a");
+        downloadButton.href = URL.createObjectURL(recordedBlob);
+        downloadButton.download = "RecordedScreenWithAudio.webm";
+  
+        // Attach click listener to signal Node.js
+        downloadButton.addEventListener('click', () => {
+          window.localStorage.setItem('downloadClicked', 'true'); // Signal Node.js
+        });
+  
+        downloadButton.click(); // Trigger the download programmatically
+  
+        screenStream.getTracks().forEach(track => track.stop());
       });
-      
-      let recorded = wait(lengthInMS).then(() => {
-        if (recorder.state === "recording") {
-          recorder.stop();
-        }
-      });
-      
-      return Promise.all([stopped, recorded]).then(() => data);
-    }
-
-    window.navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: "browser" },
-      audio: true,
-      preferCurrentTab: true
-    }).then(async screenStream => {
-      const audioContext = new AudioContext();
-      const screenAudioStream = audioContext.createMediaStreamSource(screenStream);
-
-      const dest = audioContext.createMediaStreamDestination();
-      screenAudioStream.connect(dest);
-
-      const combinedStream = new MediaStream([
-        ...screenStream.getVideoTracks(),
-        ...dest.stream.getAudioTracks()
-      ]);
-
-      const recordedChunks = await startRecording(combinedStream, 10000);
-      let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
-
-      const downloadButton = document.createElement("a");
-      downloadButton.href = URL.createObjectURL(recordedBlob);
-      downloadButton.download = "RecordedScreenWithAudio.webm";
-      downloadButton.click();
-
-      screenStream.getTracks().forEach(track => track.stop());
-    });
-  `);
-
-  console.log('Screenshare response:', response);
-  driver.sleep(10000);
-}
+    `);
+  
+    console.log('Screenshare initialized');
+  }
+  
 
 async function getDriver(): Promise<WebDriver> {
   const options = new Options();
@@ -211,20 +217,42 @@ async function getDriver(): Promise<WebDriver> {
 }
 
 export async function main(meetLink: string) {
-    const driver = await getDriver();
-  
-    // Step 1: Open Google Meet
-    await openMeet(driver , meetLink);
-  
-    // Allow captions to run for a while
-    await new Promise((resolve) => setTimeout(resolve, 20000));
-  
-    // Step 2: Save logs to JSON
-    const filePath = await saveLogsToJson(driver);
-  
-    // Step 3: Summarize meeting notes
-    await summarizeMeetingNotes(filePath);
-    // Step 4: Start screen share
-    await startScreenshare(driver);
+  const driver = await getDriver();
+
+  // Step 1: Open Google Meet
+  await openMeet(driver, meetLink);
+
+  // Allow captions to run for a while
+  await new Promise((resolve) => setTimeout(resolve, 20000));
+
+  // Step 2: Start screen share
+  await startScreenshare(driver);
+
+  // Step 3: Wait for the download click signal
+  console.log('Waiting for the download button to be clicked...');
+  let downloadClicked = false;
+
+  while (!downloadClicked) {
+    const result = await driver.executeScript(`
+      return window.localStorage.getItem('downloadClicked');
+    `);
+
+    if (result === 'true') {
+      console.log('Download button clicked. Proceeding with saving logs and summarization...');
+      downloadClicked = true;
+
+      // Clear the signal
+      await driver.executeScript(`window.localStorage.removeItem('downloadClicked');`);
+
+      // Save logs to JSON
+      const filePath = await saveLogsToJson(driver);
+
+      // Summarize meeting notes
+      await summarizeMeetingNotes(filePath);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 1000)); // Poll every 1 second
+    }
   }
+}
+
   ;
