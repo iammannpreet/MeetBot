@@ -122,13 +122,13 @@ async function summarizeMeetingNotes(filePath: string, logCallback: (log: string
         summary += newContent;
 
         console.log(newContent); // Log to console
-        logCallback(newContent); // Send log via callback
+        logCallback("newContent"); // Send log via callback
       }
     }
 
     console.log('Final Summary:', summary);
   } catch (error) {
-    console.error('Error summarizing meeting notes:', error.message);
+    console.error('Error summarizing meeting notes:', (error as Error).message);
   }
 }
 

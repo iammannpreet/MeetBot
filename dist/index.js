@@ -164,7 +164,7 @@ function summarizeMeetingNotes(filePath, logCallback) {
                         const newContent = chunk.choices[0].delta.content;
                         summary += newContent;
                         console.log(newContent); // Log to console
-                        logCallback(newContent); // Send log via callback
+                        logCallback("newContent"); // Send log via callback
                     }
                 }
             }

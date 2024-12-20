@@ -10,21 +10,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-let sseClients: Response[] = [];
-// SSE endpoint
-app.get('/api/stream', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  // Add client to SSE clients list
-  sseClients.push(res);
-
-  // Remove client on connection close
-  req.on('close', () => {
-    sseClients = sseClients.filter((client) => client !== res);
-  });
-});
 
 app.post('/api/open-meet', async (req, res) => {
   const { meetLink } = req.body;
@@ -32,9 +17,29 @@ app.post('/api/open-meet', async (req, res) => {
   if (!meetLink) {
     return res.status(400).json({ error: 'Meet link is required' });
   }
-
+  let sseClients: Response[] = [];
+  // SSE endpoint
+  app.get('/api/stream', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  
+    // Add client to SSE clients list
+    sseClients.push(res);
+  
+    // Remove client on connection close
+    req.on('close', () => {
+      sseClients = sseClients.filter((client) => client !== res);
+    });
+  });
+  
   try {
-    await main(meetLink); // Call the main function with the Meet URL
+    await main(meetLink, (log) => {
+      // Send log to all SSE clients
+      sseClients.forEach((client) => {
+        client.write(`data: ${JSON.stringify({ log })}\n\n`);
+      });
+    });
     res.json({ status: 'success', message: 'Meet workflow completed successfully' });
   } catch (error) {
     console.error('Error in workflow:', error);
