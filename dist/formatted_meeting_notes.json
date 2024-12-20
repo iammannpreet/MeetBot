@@ -9,7 +9,15 @@
       },
       {
         "speaker": "You",
-        "text": "Know."
+        "text": ""
+      },
+      {
+        "speaker": "You",
+        "text": "Hello."
+      },
+      {
+        "speaker": "You",
+        "text": "Hello, hello."
       },
       {
         "speaker": "Silence",
