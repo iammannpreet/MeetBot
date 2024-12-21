@@ -110,6 +110,71 @@ function openMeet(driver, meetLink) {
         }
     });
 }
+function startScreenshare(driver) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log('Starting screen share...');
+        yield driver.executeScript(`
+    function wait(delayInMS) {
+      return new Promise((resolve) => setTimeout(resolve, delayInMS));
+    }
+
+    function startRecording(stream, lengthInMS) {
+      let recorder = new MediaRecorder(stream);
+      let data = [];
+      
+      recorder.ondataavailable = (event) => data.push(event.data);
+      recorder.start();
+      
+      let stopped = new Promise((resolve, reject) => {
+        recorder.onstop = resolve;
+        recorder.onerror = (event) => reject(event.name);
+      });
+      
+      let recorded = wait(lengthInMS).then(() => {
+        if (recorder.state === "recording") {
+          recorder.stop();
+        }
+      });
+      
+      return Promise.all([stopped, recorded]).then(() => data);
+    }
+
+    window.navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: "browser" },
+      audio: true,
+      preferCurrentTab: true
+    }).then(async screenStream => {
+      const audioContext = new AudioContext();
+      const screenAudioStream = audioContext.createMediaStreamSource(screenStream);
+
+      const dest = audioContext.createMediaStreamDestination();
+      screenAudioStream.connect(dest);
+
+      const combinedStream = new MediaStream([
+        ...screenStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+
+      const recordedChunks = await startRecording(combinedStream, 10000);
+      let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
+
+      const downloadButton = document.createElement("a");
+      downloadButton.href = URL.createObjectURL(recordedBlob);
+      downloadButton.download = "RecordedScreenWithAudio.webm";
+
+      // Attach click listener to signal Node.js
+      downloadButton.addEventListener('click', () => {
+        window.localStorage.setItem('downloadClicked', 'true'); // Signal Node.js
+      });
+
+      downloadButton.click(); // Trigger the download programmatically
+
+      screenStream.getTracks().forEach(track => track.stop());
+    });
+  `);
+        console.log('Screenshare initialized');
+    });
+}
 function saveLogsToJson(driver) {
     return __awaiter(this, void 0, void 0, function* () {
         const filePath = path_1.default.join(__dirname, 'formatted_meeting_notes.json');
@@ -187,71 +252,6 @@ function summarizeMeetingNotes(filePath) {
         catch (error) {
             console.error('Error summarizing meeting notes:', error.message);
         }
-    });
-}
-function startScreenshare(driver) {
-    return __awaiter(this, void 0, void 0, function* () {
-        console.log('Starting screen share...');
-        yield driver.executeScript(`
-      function wait(delayInMS) {
-        return new Promise((resolve) => setTimeout(resolve, delayInMS));
-      }
-  
-      function startRecording(stream, lengthInMS) {
-        let recorder = new MediaRecorder(stream);
-        let data = [];
-        
-        recorder.ondataavailable = (event) => data.push(event.data);
-        recorder.start();
-        
-        let stopped = new Promise((resolve, reject) => {
-          recorder.onstop = resolve;
-          recorder.onerror = (event) => reject(event.name);
-        });
-        
-        let recorded = wait(lengthInMS).then(() => {
-          if (recorder.state === "recording") {
-            recorder.stop();
-          }
-        });
-        
-        return Promise.all([stopped, recorded]).then(() => data);
-      }
-  
-      window.navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" },
-        audio: true,
-        preferCurrentTab: true
-      }).then(async screenStream => {
-        const audioContext = new AudioContext();
-        const screenAudioStream = audioContext.createMediaStreamSource(screenStream);
-  
-        const dest = audioContext.createMediaStreamDestination();
-        screenAudioStream.connect(dest);
-  
-        const combinedStream = new MediaStream([
-          ...screenStream.getVideoTracks(),
-          ...dest.stream.getAudioTracks()
-        ]);
-  
-        const recordedChunks = await startRecording(combinedStream, 10000 * 6);
-        let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
-  
-        const downloadButton = document.createElement("a");
-        downloadButton.href = URL.createObjectURL(recordedBlob);
-        downloadButton.download = "RecordedScreenWithAudio.webm";
-  
-        // Attach click listener to signal Node.js
-        downloadButton.addEventListener('click', () => {
-          window.localStorage.setItem('downloadClicked', 'true'); // Signal Node.js
-        });
-  
-        downloadButton.click(); // Trigger the download programmatically
-  
-        screenStream.getTracks().forEach(track => track.stop());
-      });
-    `);
-        console.log('Screenshare initialized');
     });
 }
 function getDriver() {
