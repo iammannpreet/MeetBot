@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/server.ts","./src/drivers/chromedriver.ts","./src/meetproviders/googlemeetautomation.ts"],"version":"5.7.2"}
+{"root":["./src/main.ts","./src/server.ts","./src/drivers/chromedriver.ts","./src/logs/savelogstojson.ts","./src/meetproviders/googlemeetautomation.ts"],"version":"5.7.2"}
