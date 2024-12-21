@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"root":["./src/main.ts","./src/server.ts","./src/drivers/driversetup.ts","./src/handlers/meetinghandler.ts","./src/types/types.ts","./src/utils/logutils.ts","./src/utils/summaryutils.ts"],"version":"5.7.2"}
+=======
+{"root":["./src/main.ts","./src/server.ts","./src/drivers/chromedriver.ts"],"version":"5.7.2"}
+>>>>>>> main

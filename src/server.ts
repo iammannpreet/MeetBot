@@ -1,18 +1,26 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+<<<<<<< HEAD
 import { main } from './main'; // Import the main function
+=======
+import { main } from './main'; 
+>>>>>>> main
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+<<<<<<< HEAD
 app.use(cors());
 app.use(express.json()); // Middleware to parse JSON bodies
 
 // API route to trigger the Google Meet workflow
 app.post('/api/open-meet', async (req: Request, res: Response) => {
+=======
+app.post('/api/open-google-meet', async (req, res) => {
+>>>>>>> main
   const { meetLink } = req.body;
 
   if (!meetLink) {

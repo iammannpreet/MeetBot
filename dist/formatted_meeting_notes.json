@@ -9,11 +9,7 @@
       },
       {
         "speaker": "You",
-        "text": "He?"
-      },
-      {
-        "speaker": "You",
-        "text": "How are you?"
+        "text": "Okay."
       },
       {
         "speaker": "Silence",
@@ -21,15 +17,11 @@
       },
       {
         "speaker": "You",
-        "text": "You find?"
+        "text": "Facility."
       },
       {
         "speaker": "You",
-        "text": "How are you?"
-      },
-      {
-        "speaker": "Mann Preet",
-        "text": "it's"
+        "text": "Okay."
       }
     ]
   }
