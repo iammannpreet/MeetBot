@@ -70,7 +70,6 @@ async function openMeet(driver: WebDriver, meetLink: string) {
   }
 }
 
-
 async function saveLogsToJson(driver: WebDriver) {
   const filePath = path.join(__dirname, 'formatted_meeting_notes.json');
 
@@ -141,8 +140,7 @@ async function summarizeMeetingNotes(filePath: string) {
   }
 }
 
-
-  async function startScreenshare(driver: WebDriver) {
+async function startScreenshare(driver: WebDriver) {
     console.log('Starting screen share...');
   
     await driver.executeScript(`
@@ -206,8 +204,7 @@ async function summarizeMeetingNotes(filePath: string) {
     `);
   
     console.log('Screenshare initialized');
-  }
-  
+ }
 
 async function getDriver(): Promise<WebDriver> {
   const options = new Options();
