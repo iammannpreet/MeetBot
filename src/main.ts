@@ -1,11 +1,11 @@
-import { Builder, Browser, By, until, WebDriver } from 'selenium-webdriver';
-import { Options } from 'selenium-webdriver/chrome';
+import { getChromeDriver } from './drivers/chromeDriver';
 import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
-dotenv.config();
-
 import { HfInference } from '@huggingface/inference';
+import { By, until, WebDriver } from 'selenium-webdriver';
+
+dotenv.config();
 
 // Initialize Hugging Face Client
 const client = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
@@ -20,7 +20,7 @@ interface CaptionsText {
 
 async function openGoogleMeet(driver: WebDriver, meetLink: string) {
   try {
-    await driver.get(meetLink); // Use the dynamic meetLink
+    await driver.get(meetLink);
     
     // Handle popups and name input
     const firstPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
@@ -69,6 +69,7 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
     console.error('Error in openMeet function:', error);
   }
 }
+
 async function startScreenshare(driver: WebDriver) {
   console.log('Starting screen share...');
 
@@ -204,22 +205,8 @@ async function summarizeMeetingNotes(filePath: string) {
   }
 }
 
-async function getDriver(): Promise<WebDriver> {
-  const options = new Options();
-  options.addArguments('--disable-blink-features=AutomationControlled');
-  options.addArguments('--use-fake-ui-for-media-stream');
-  options.addArguments('--window-size=1080,720');
-  options.addArguments('--auto-select-desktop-capture-source=[RECORD]');
-  options.addArguments('--enable-usermedia-screen-capturing');
-  options.addArguments('--auto-select-tab-capture-source-by-title="Meet"');
-  options.addArguments('--allow-running-insecure-content');
-
-  const driver = await new Builder().forBrowser(Browser.CHROME).setChromeOptions(options).build();
-  return driver;
-}
-
 export async function main(meetLink: string) {
-  const driver = await getDriver();
+  const driver = await getChromeDriver(); // This is used in subsequent function calls
 
   // Step 1: Open Google Meet
   await openGoogleMeet(driver, meetLink);
@@ -255,4 +242,7 @@ export async function main(meetLink: string) {
       await new Promise((resolve) => setTimeout(resolve, 1000)); // Poll every 1 second
     }
   }
-};
+
+  // Ensure the driver is properly closed
+  await driver.quit();
+}
