@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { main } from './index'; // Import the main function from index.ts
+import { main } from './main'; 
 
 dotenv.config();
 
