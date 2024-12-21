@@ -18,7 +18,7 @@ interface CaptionsText {
   div2: string;
 }
 
-async function openMeet(driver: WebDriver, meetLink: string) {
+async function openGoogleMeet(driver: WebDriver, meetLink: string) {
   try {
     await driver.get(meetLink); // Use the dynamic meetLink
     
@@ -222,7 +222,7 @@ export async function main(meetLink: string) {
   const driver = await getDriver();
 
   // Step 1: Open Google Meet
-  await openMeet(driver, meetLink);
+  await openGoogleMeet(driver, meetLink);
 
   // Allow captions to run for a while
   await new Promise((resolve) => setTimeout(resolve, 20000));
