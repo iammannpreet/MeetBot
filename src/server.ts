@@ -11,7 +11,7 @@ app.use(cors());
 // Middleware to parse JSON bodies
 app.use(express.json());
 
-app.post('/api/open-meet', async (req, res) => {
+app.post('/api/open-google-meet', async (req, res) => {
   const { meetLink } = req.body;
 
   if (!meetLink) {
