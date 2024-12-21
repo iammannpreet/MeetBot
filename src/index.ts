@@ -187,7 +187,7 @@ async function summarizeMeetingNotes(filePath: string) {
           ...dest.stream.getAudioTracks()
         ]);
   
-        const recordedChunks = await startRecording(combinedStream, 10000);
+        const recordedChunks = await startRecording(combinedStream, 10000 * 6);
         let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
   
         const downloadButton = document.createElement("a");

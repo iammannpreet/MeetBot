@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@huggingface/inference": "^2.8.1",
+    "@supabase/supabase-js": "^2.47.10",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

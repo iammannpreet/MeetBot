@@ -1,27 +1,71 @@
 {
   "prompt": "Summarize the following meeting notes, ignore Silence and identify action items:",
   "meeting_notes": {
-    "date": "2024-12-20",
+    "date": "2024-12-21",
     "content": [
       {
         "speaker": "Silence",
         "text": ""
       },
       {
-        "speaker": "You",
-        "text": ""
+        "speaker": "Sukhwinder Singh",
+        "text": "How are you?"
       },
       {
-        "speaker": "You",
-        "text": "Hello."
+        "speaker": "Mann Preet",
+        "text": "It basic winter. How are you?"
       },
       {
-        "speaker": "You",
-        "text": "Hello, hello."
+        "speaker": "Sukhwinder Singh",
+        "text": "Good. How are you?"
+      },
+      {
+        "speaker": "Mann Preet",
+        "text": "I am good. Did you bring the"
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "Bro, yes I did."
+      },
+      {
+        "speaker": "Mann Preet",
+        "text": "What did you bring?"
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "but,"
+      },
+      {
+        "speaker": "Mann Preet",
+        "text": "Bananas and eggs."
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "For you."
+      },
+      {
+        "speaker": "Mann Preet",
+        "text": "Did you bring any milk?"
       },
       {
         "speaker": "Silence",
         "text": ""
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "Hello."
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "Hello. Papa"
+      },
+      {
+        "speaker": "You",
+        "text": "A little bit."
+      },
+      {
+        "speaker": "Sukhwinder Singh",
+        "text": "Please."
       }
     ]
   }
