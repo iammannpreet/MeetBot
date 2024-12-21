@@ -1,17 +1,18 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { main } from './index'; // Import the main function from index.ts
+import { main } from './main'; // Import the main function
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.use(cors());
-// Middleware to parse JSON bodies
-app.use(express.json());
 
-app.post('/api/open-meet', async (req, res) => {
+app.use(cors());
+app.use(express.json()); // Middleware to parse JSON bodies
+
+// API route to trigger the Google Meet workflow
+app.post('/api/open-meet', async (req: Request, res: Response) => {
   const { meetLink } = req.body;
 
   if (!meetLink) {
@@ -19,11 +20,15 @@ app.post('/api/open-meet', async (req, res) => {
   }
 
   try {
-    await main(meetLink); // Call the main function with the Meet URL
-    res.json({ status: 'success', message: 'Meet workflow completed successfully' });
+    console.log(`Received request to process Meet link: ${meetLink}`);
+    await main(meetLink); // Call the main workflow function
+    res.status(200).json({ status: 'success', message: 'Meet workflow completed successfully' });
   } catch (error) {
-    console.error('Error in workflow:', error);
-    res.status(500).json({ error: 'Failed to process Meet workflow', details: (error as Error).message });
+    console.error('Error in Meet workflow:', error);
+    res.status(500).json({
+      error: 'Failed to process Meet workflow',
+      details: (error as Error).message,
+    });
   }
 });
 

@@ -1,8 +1,10 @@
 {
   "name": "meet-recorder",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
     "dev": "tsc -b && node dist/server.js"
   },
   "keywords": [],
