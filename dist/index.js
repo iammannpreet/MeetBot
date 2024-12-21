@@ -64,7 +64,7 @@ const inference_1 = require("@huggingface/inference");
 const client = new inference_1.HfInference(process.env.HUGGINGFACE_API_KEY);
 let lastLoggedText = null;
 const logs = []; // To store logs
-function openMeet(driver, meetLink) {
+function openGoogleMeet(driver, meetLink) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             yield driver.get(meetLink); // Use the dynamic meetLink
@@ -272,7 +272,7 @@ function main(meetLink) {
     return __awaiter(this, void 0, void 0, function* () {
         const driver = yield getDriver();
         // Step 1: Open Google Meet
-        yield openMeet(driver, meetLink);
+        yield openGoogleMeet(driver, meetLink);
         // Allow captions to run for a while
         yield new Promise((resolve) => setTimeout(resolve, 20000));
         // Step 2: Start screen share
