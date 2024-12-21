@@ -1,4 +1,6 @@
 import { WebDriver } from 'selenium-webdriver';
+import fs from 'fs';
+import path from 'path';
 
 export async function startScreenshare(driver: WebDriver) {
   console.log('Starting screen share...');
@@ -48,15 +50,17 @@ export async function startScreenshare(driver: WebDriver) {
       const recordedChunks = await startRecording(combinedStream, 10000);
       let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
 
-      const downloadButton = document.createElement("a");
-      downloadButton.href = URL.createObjectURL(recordedBlob);
-      downloadButton.download = "RecordedScreenWithAudio.webm";
-
-      downloadButton.addEventListener('click', () => {
-        window.localStorage.setItem('downloadClicked', 'true');
+      // Upload the recording to the server
+      const arrayBuffer = await recordedBlob.arrayBuffer();
+      await fetch('http://localhost:3000/api/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Disposition': 'attachment; filename="RecordedScreenWithAudio.webm"',
+        },
+        body: arrayBuffer,
       });
 
-      downloadButton.click();
       screenStream.getTracks().forEach(track => track.stop());
     });
   `);
