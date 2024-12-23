@@ -1,11 +1,11 @@
 import { WebDriver } from 'selenium-webdriver';
-import fs from 'fs';
-import path from 'path';
 
-export async function startScreenshare(driver: WebDriver) {
+export async function startScreenshare(driver: WebDriver): Promise<boolean> {
   console.log('Starting screen share...');
 
-  await driver.executeScript(`
+  const uploadComplete = await driver.executeAsyncScript<boolean>(`
+    const callback = arguments[arguments.length - 1];
+
     function wait(delayInMS) {
       return new Promise((resolve) => setTimeout(resolve, delayInMS));
     }
@@ -61,9 +61,15 @@ export async function startScreenshare(driver: WebDriver) {
         body: arrayBuffer,
       });
 
+      // Notify upload completion
       screenStream.getTracks().forEach(track => track.stop());
+      callback(true);
+    }).catch(error => {
+      console.error('Error during screen share:', error);
+      callback(false);
     });
-  `);
+  `) as boolean;
 
   console.log('Screenshare initialized');
+  return uploadComplete;
 }

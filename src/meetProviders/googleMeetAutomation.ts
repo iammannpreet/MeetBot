@@ -8,7 +8,8 @@ interface CaptionsText {
 let lastLoggedText: string | null = null;
 const logs: { timestamp: string; combined: string }[] = []; // To store logs
 
-export async function openGoogleMeet(driver: WebDriver, meetLink: string) {
+export async function openGoogleMeet(driver: WebDriver, meetLink: string, logs: { timestamp: string; combined: string }[]) {
+
   try {
     await driver.get(meetLink);
     
