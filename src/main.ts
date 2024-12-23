@@ -22,13 +22,8 @@ export async function main(meetLink: string) {
     const uploadComplete = await startScreenshare(driver);
 
     if (uploadComplete) {
-      console.log('Recording uploaded successfully.');
-
       // Process logs and summarize meeting notes
-      console.log('Logs content:', logs);
-
       const filePath = await saveLogsToJson(logs);
-      console.log(`Logs saved to: ${filePath}`);
 
       try {
         const summary = await summarizeMeetingNotes(filePath, client);
