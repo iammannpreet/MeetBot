@@ -1,4 +1,4 @@
-import { saveLogsToJson } from './logs/saveLogsToJson';
+import { saveLogsToJson } from './logstoJson/saveLogsToJson';
 import { summarizeMeetingNotes } from './summarizer/summarMeetingNotes';
 import { getChromeDriver } from './drivers/chromeDriver';
 import { openGoogleMeet } from './meetProviders/googleMeetAutomation';
