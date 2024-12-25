@@ -32,23 +32,27 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
     await nameInput.sendKeys('Meeting bot');
     await driver.sleep(1000);
 
-    const buttonInput = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')), 10000);
-    await buttonInput.click();
-    console.log("Requested to join the meeting...");
-
-    // Wait for the second "Got it" button (indicating admission)
-    console.log("Waiting to be admitted to the meeting...");
-    const secondPopupButton = await driver.wait(
-      until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')),
-      60000 // Wait up to 60 seconds for admission
+    const buttonInput = await driver.wait(
+      until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')),
+      5000 // Wait up to 10 seconds for "Ask to join" button
     );
-    await secondPopupButton.click();
-    console.log("Successfully admitted to the meeting.");
-
-// Log the time the meeting was joined
-const joinTime = new Date().toISOString();
-console.log(`Successfully admitted to the meeting at ${joinTime}.`);
-
+    await buttonInput.click();
+    
+    console.log("Waiting to be admitted into the meeting...");
+    
+    try {
+      // Wait for the "Got it" button to appear, signaling you've been admitted
+      const secondPopupButton = await driver.wait(
+        until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')),
+        600000 // 10 minutes timeout
+      );
+      await secondPopupButton.click();
+      console.log("Admitted into the meeting.");
+    } catch (error) {
+      console.error("Timeout: No one admitted the bot into the meeting within 10 minutes.");
+      throw new Error("Failed to join the meeting: Admission timeout");
+    }
+    
     // Activate closed captions
     const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
     await ccButton.click();
@@ -74,7 +78,7 @@ console.log(`Successfully admitted to the meeting at ${joinTime}.`);
         logs.push({ timestamp, combined: combinedText });
         lastLoggedText = combinedText;
       }
-    }, 600 * 1000);
+    }, 500);
   } catch (error) {
     console.error('Error in openMeet function:', error);
   }
