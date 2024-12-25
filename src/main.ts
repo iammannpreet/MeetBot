@@ -34,10 +34,17 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
 
     const buttonInput = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')), 10000);
     await buttonInput.click();
-    await driver.sleep(4000);
+    console.log("Requested to join the meeting...");
 
-    const secondPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
+    // Wait for the second "Got it" button (indicating admission)
+    console.log("Waiting to be admitted to the meeting...");
+    const secondPopupButton = await driver.wait(
+      until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')),
+      60000 // Wait up to 60 seconds for admission
+    );
     await secondPopupButton.click();
+    console.log("Successfully admitted to the meeting.");
+
 
     // Activate closed captions
     const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
@@ -64,7 +71,7 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
         logs.push({ timestamp, combined: combinedText });
         lastLoggedText = combinedText;
       }
-    }, 500);
+    }, 600 * 1000);
   } catch (error) {
     console.error('Error in openMeet function:', error);
   }
