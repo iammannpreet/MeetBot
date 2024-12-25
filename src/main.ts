@@ -45,6 +45,9 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
     await secondPopupButton.click();
     console.log("Successfully admitted to the meeting.");
 
+// Log the time the meeting was joined
+const joinTime = new Date().toISOString();
+console.log(`Successfully admitted to the meeting at ${joinTime}.`);
 
     // Activate closed captions
     const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
