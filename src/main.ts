@@ -6,62 +6,69 @@ import { HfInference } from '@huggingface/inference';
 import { By, until, WebDriver } from 'selenium-webdriver';
 
 dotenv.config();
+interface CaptionsText {
+  div1: string; // Represents the speaker's name or other text content
+  div2: string; // Represents the caption text
+}
 
 // Initialize Hugging Face Client
 const client = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
 
 let lastLoggedText: string | null = null;
-const logs: { timestamp: string; combined: string }[] = []; // To store logs
+const logs: { timestamp: string; combined: string }[] = []; // Store captured captions
 
-interface CaptionsText {
-  div1: string;
-  div2: string;
-}
-
-async function openGoogleMeet(driver: WebDriver, meetLink: string) {
+async function joinGoogleMeet(driver: WebDriver, meetLink: string) {
   try {
+    console.log("Navigating to Google Meet...");
     await driver.get(meetLink);
-    
-    // Handle popups and name input
-    const firstPopupButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
-    await firstPopupButton.click();
 
+    // Handle initial popups
+    const gotItButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
+    await gotItButton.click();
+
+    // Enter bot's name
     const nameInput = await driver.wait(until.elementLocated(By.xpath('//input[@placeholder="Your name"]')), 10000);
     await nameInput.clear();
-    await nameInput.click();
-    await nameInput.sendKeys('Meeting bot');
-    await driver.sleep(1000);
+    await nameInput.sendKeys("Mann's Meeting bot");
 
-    const buttonInput = await driver.wait(
-      until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')),
-      5000 // Wait up to 10 seconds for "Ask to join" button
-    );
-    await buttonInput.click();
-    
-    console.log("Waiting to be admitted into the meeting...");
-    
-    try {
-      // Wait for the "Got it" button to appear, signaling you've been admitted
-      const secondPopupButton = await driver.wait(
-        until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')),
-        600000 // 10 minutes timeout
-      );
-      await secondPopupButton.click();
-      console.log("Admitted into the meeting.");
-    } catch (error) {
-      console.error("Timeout: No one admitted the bot into the meeting within 10 minutes.");
-      throw new Error("Failed to join the meeting: Admission timeout");
-    }
-    
-    // Activate closed captions
-    const ccButton = await driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 10000);
+    // Click "Ask to join"
+    const askToJoinButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')), 5000);
+    await askToJoinButton.click();
+
+    // Wait for admission into the meeting (max 10 mins)
+    console.log("Waiting for admission...");
+    const GotItButton =await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 600000);
+    console.log("Admitted to the meeting.");
+    await GotItButton.click();
+    const ccButton = driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 1000);
     await ccButton.click();
-    console.log('Closed Captions activated');
-  
-    // Start monitoring captions
-    console.log('Monitoring captions...');
-    setInterval(async () => {
-      const captionsText = await driver.executeScript((): CaptionsText => {
+    console.log("Capturing Captions enabled.");
+  } catch (error) {
+    console.error("Error in joinGoogleMeet:", (error as Error).message);
+    throw error;
+  }
+}
+
+async function startConcurrentTasks(driver: WebDriver, duration: number) {
+  console.log("Starting concurrent tasks: screen sharing and caption capture...");
+
+  const tasks = [
+    startCapturingCaptions(driver, duration), // Caption capturing task
+    startScreenshare(driver, duration), // Screen sharing task
+  ];
+
+  await Promise.all(tasks); // Run both tasks concurrently
+  console.log("Concurrent tasks completed.");
+}
+
+async function startCapturingCaptions(driver: WebDriver, duration: number): Promise<void> {
+  console.log("Starting caption capture...");
+  const intervalTime = 100; // Interval in ms
+  const endTime = Date.now() + duration;
+
+  const interval = setInterval(async () => {
+    try {
+      const captionsText = await driver.executeScript(() => {
         const div1 = document.querySelector('div.KcIKyf.jxFHg')?.textContent || '';
         const div2 = document.querySelector('div[jsname="tgaKEf"] span')?.textContent || '';
         return { div1, div2 };
@@ -70,193 +77,139 @@ async function openGoogleMeet(driver: WebDriver, meetLink: string) {
       const combinedText = `${captionsText.div1}: ${captionsText.div2}`.trim();
 
       if (combinedText && combinedText !== lastLoggedText) {
-        const timestamp = new Date().toISOString();
-        console.log('Captured Divs:');
-        console.log('Combined:', combinedText);
-
-        // Add to logs array
-        logs.push({ timestamp, combined: combinedText });
+        logs.push({ timestamp: new Date().toISOString(), combined: combinedText });
         lastLoggedText = combinedText;
+        console.log("Captured:", combinedText);
       }
-    }, 500);
-  } catch (error) {
-    console.error('Error in openMeet function:', error);
-  }
+    } catch (error) {
+      console.error("Error capturing captions:", (error as Error).message);
+    }
+  }, intervalTime);
+
+  await new Promise((resolve) => setTimeout(resolve, duration));
+  clearInterval(interval);
+  console.log("Caption capture completed.");
 }
 
-async function startScreenshare(driver: WebDriver) {
-  console.log('Starting screen share...');
 
+async function startScreenshare(driver: WebDriver, duration: number): Promise<void> {
+  console.log("Starting screen sharing...");
   await driver.executeScript(`
-    function wait(delayInMS) {
-      return new Promise((resolve) => setTimeout(resolve, delayInMS));
-    }
-
-    function startRecording(stream, lengthInMS) {
-      let recorder = new MediaRecorder(stream);
-      let data = [];
-      
-      recorder.ondataavailable = (event) => data.push(event.data);
-      recorder.start();
-      
-      let stopped = new Promise((resolve, reject) => {
-        recorder.onstop = resolve;
-        recorder.onerror = (event) => reject(event.name);
-      });
-      
-      let recorded = wait(lengthInMS).then(() => {
-        if (recorder.state === "recording") {
-          recorder.stop();
-        }
-      });
-      
-      return Promise.all([stopped, recorded]).then(() => data);
-    }
-
-    window.navigator.mediaDevices.getDisplayMedia({
+    const stream = await navigator.mediaDevices.getDisplayMedia({
       video: { displaySurface: "browser" },
       audio: true,
-      preferCurrentTab: true
-    }).then(async screenStream => {
-      const audioContext = new AudioContext();
-      const screenAudioStream = audioContext.createMediaStreamSource(screenStream);
-
-      const dest = audioContext.createMediaStreamDestination();
-      screenAudioStream.connect(dest);
-
-      const combinedStream = new MediaStream([
-        ...screenStream.getVideoTracks(),
-        ...dest.stream.getAudioTracks()
-      ]);
-
-      const recordedChunks = await startRecording(combinedStream, 10000);
-      let recordedBlob = new Blob(recordedChunks, { type: "video/webm" });
-
-      const downloadButton = document.createElement("a");
-      downloadButton.href = URL.createObjectURL(recordedBlob);
-      downloadButton.download = "RecordedScreenWithAudio.webm";
-
-      // Attach click listener to signal Node.js
-      downloadButton.addEventListener('click', () => {
-        window.localStorage.setItem('downloadClicked', 'true'); // Signal Node.js
-      });
-
-      downloadButton.click(); // Trigger the download programmatically
-
-      screenStream.getTracks().forEach(track => track.stop());
     });
+    const recorder = new MediaRecorder(stream);
+    const chunks = [];
+
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    recorder.start();
+
+    setTimeout(() => recorder.stop(), ${duration}); // Record for the given duration
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: "video/webm" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "screen_recording.webm";
+      a.click();
+      stream.getTracks().forEach((track) => track.stop());
+    };
   `);
-
-  console.log('Screenshare initialized');
+  console.log("Screen sharing completed.");
 }
-async function saveLogsToJson(driver: WebDriver) {
-  const filePath = path.join(__dirname, 'formatted_meeting_notes.json');
 
-  // Step 1: Transform the logs to the required format
+
+async function processMeetingData(driver: WebDriver): Promise<object> {
+  try {
+    console.log("Processing meeting data...");
+
+    // Save captions to a JSON file
+    const captionsPath = saveLogsToJson();
+    console.log(`Captions saved at ${captionsPath}`);
+
+    // Summarize captions
+    const summaryPath = await summarizeMeetingNotes(captionsPath);
+    console.log(`Summary saved at ${summaryPath}`);
+
+    return { captionsPath, summaryPath };
+  } catch (error) {
+    console.error("Error processing meeting data:", (error as Error).message);
+    throw error;
+  }
+}
+
+function saveLogsToJson(): string {
+  const filePath = path.join(__dirname, 'captions.json');
+
+  // Get the current system time in EST
+  const estDate = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  // Add a predefined heading and logs
   const meetingNotes = {
-    prompt: "Summarize the following meeting notes, ignore Silence and identify action items:",
-    meeting_notes: {
-      date: new Date().toISOString().split('T')[0], // Capture current system date (YYYY-MM-DD)
-      content: logs
-        .filter((log) => log.combined.includes(":")) // Exclude empty or malformed entries
-        .map((log) => {
-          const [speaker, ...textParts] = log.combined.split(":");
-          const text = textParts.join(":").trim();
-          return {
-            speaker: speaker.trim() || "Silence", // Fallback for missing speaker
-            text: text || "", // Ensure no undefined text
-          };
-        }),
-    },
+    heading: `Summarize these notes of the meeting held on ${estDate}. Ignore the repeated words and give me important tasks assigned and summary of the meeting.`,
+    logs: logs.map((log) => ({
+      timestamp: log.timestamp,
+      content: log.combined,
+    })),
   };
 
-  // Step 2: Write the transformed data to a JSON file
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
-    console.log('Logs saved to formatted_meeting_notes.json');
-  } catch (error) {
-    console.error('Error saving logs to JSON file:', error);
-  }
+  // Write the data to the JSON file
+  fs.writeFileSync(filePath, JSON.stringify(meetingNotes, null, 2), 'utf8');
+  console.log("Logs saved with a predefined heading at", filePath);
 
-  return filePath; // Return the path of the saved file
+  return filePath;
 }
-async function summarizeMeetingNotes(filePath: string) {
+
+
+async function summarizeMeetingNotes(filePath: string): Promise<string> {
   try {
-    // Step 1: Read the JSON file
+    console.log("Sending captions to Hugging Face for summarization...");
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    // Step 2: Send to Hugging Face for Summarization
-    console.log('Sending meeting notes to Hugging Face for summarization...');
     const stream = client.chatCompletionStream({
       model: "01-ai/Yi-1.5-34B-Chat",
-      messages: [
-        { role: "user", content: JSON.stringify(data) }
-      ],
+      messages: [{ role: "user", content: JSON.stringify(data) }],
       temperature: 0.5,
       max_tokens: 2048,
-      top_p: 0.7
+      top_p: 0.7,
     });
 
-    // Step 3: Stream the response and write to a text file
     let summary = '';
-    const outputFilePath = path.join(__dirname, 'meeting_summary.txt');
-
-    const writeStream = fs.createWriteStream(outputFilePath, { flags: 'w' }); // Open file stream
+    const outputFilePath = path.join(__dirname, 'summary.txt');
+    const writeStream = fs.createWriteStream(outputFilePath, { flags: 'w' });
 
     for await (const chunk of stream) {
       if (chunk.choices && chunk.choices.length > 0) {
         const newContent = chunk.choices[0].delta.content;
         summary += newContent;
-        writeStream.write(newContent); // Write streamed content to file
+        writeStream.write(newContent);
       }
     }
 
-    writeStream.end(); // Close the file stream after writing is complete
-
-    console.log(`Final Summary saved to ${outputFilePath}`);
+    writeStream.end();
+    console.log(`Summary saved at ${outputFilePath}`);
+    return outputFilePath;
   } catch (error) {
-    console.error('Error summarizing meeting notes:', (error as Error).message);
+    console.error("Error summarizing meeting notes:", (error as Error).message);
+    throw error;
   }
 }
 
 export async function main(meetLink: string) {
-  const driver = await getChromeDriver(); // This is used in subsequent function calls
+  const driver = await getChromeDriver();
+  const Duration = 20000; // Duration in milliseconds
 
-  // Step 1: Open Google Meet
-  await openGoogleMeet(driver, meetLink);
+  try {
+    await joinGoogleMeet(driver, meetLink);
+    await startConcurrentTasks(driver, Duration); // Pass the duration
+    const processedData = await processMeetingData(driver);
 
-  // Allow captions to run for a while
-  await new Promise((resolve) => setTimeout(resolve, 20000));
-
-  // Step 2: Start screen share
-  await startScreenshare(driver);
-
-  // Step 3: Wait for the download click signal
-  console.log('Waiting for the download button to be clicked...');
-  let downloadClicked = false;
-
-  while (!downloadClicked) {
-    const result = await driver.executeScript(`
-      return window.localStorage.getItem('downloadClicked');
-    `);
-
-    if (result === 'true') {
-      console.log('Download button clicked. Proceeding with saving logs and summarization...');
-      downloadClicked = true;
-
-      // Clear the signal
-      await driver.executeScript(`window.localStorage.removeItem('downloadClicked');`);
-
-      // Save logs to JSON
-      const filePath = await saveLogsToJson(driver);
-
-      // Summarize meeting notes
-      await summarizeMeetingNotes(filePath);
-    } else {
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Poll every 1 second
-    }
+    console.log("Meeting data processed successfully:", processedData);
+  } catch (error) {
+    console.error("Error in MeetBot:", (error as Error).message);
+  } finally {
+    console.log("Driver closed.");
   }
-
-  // Ensure the driver is properly closed
-  await driver.quit();
 }
