@@ -48,25 +48,55 @@ async function joinGoogleMeet(driver: WebDriver, meetLink: string) {
     throw error;
   }
 }
+async function monitorForKillSwitch(driver: WebDriver, userLeftMessage: string, killSwitch: { isActive: boolean }) {
+  console.log(`Monitoring for "${userLeftMessage}" to act as a kill switch...`);
 
-async function startConcurrentTasks(driver: WebDriver, duration: number) {
-  console.log("Starting concurrent tasks: screen sharing and caption capture...");
+  while (!killSwitch.isActive) {
+    try {
+      const pageText = await driver.executeScript(() => {
+        return document.body.textContent || ''; // Fetch all visible text on the page
+      }) as string; // Explicitly cast to string
 
-  const tasks = [
-    startCapturingCaptions(driver, duration), // Caption capturing task
-    startScreenshare(driver, duration), // Screen sharing task
-  ];
+      if (pageText.includes(userLeftMessage)) {
+        console.log(`Kill switch triggered: "${userLeftMessage}" detected.`);
+        killSwitch.isActive = true; // Activate the kill switch
+        break;
+      }
+    } catch (error) {
+      console.error("Error while monitoring for kill switch:", (error as Error).message);
+    }
 
-  await Promise.all(tasks); // Run both tasks concurrently
-  console.log("Concurrent tasks completed.");
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Check every second
+  }
 }
 
-async function startCapturingCaptions(driver: WebDriver, duration: number): Promise<void> {
-  console.log("Starting caption capture...");
-  const intervalTime = 100; // Interval in ms
-  const endTime = Date.now() + duration;
 
-  const interval = setInterval(async () => {
+async function startConcurrentTasks(driver: WebDriver, userLeftMessage: string) {
+  console.log("Starting concurrent tasks: screen sharing and caption capture...");
+
+  const killSwitch = { isActive: false }; // Shared kill switch state
+
+  // Monitor for the user leaving in parallel
+  const monitorTask = monitorForKillSwitch(driver, userLeftMessage, killSwitch);
+
+  // Run the main tasks (screen sharing and caption capturing)
+  const mainTasks = Promise.all([
+    startCapturingCaptions(driver, killSwitch), // Pass kill switch to captions task
+    startScreenshare(driver, killSwitch), // Pass kill switch to screenshare task
+  ]);
+
+  // Wait for either the monitor task or main tasks to finish
+  await Promise.race([monitorTask, mainTasks]);
+
+  console.log("Concurrent tasks stopped by kill switch.");
+}
+
+
+async function startCapturingCaptions(driver: WebDriver, killSwitch: { isActive: boolean }): Promise<void> {
+  console.log("Starting caption capture...");
+  const intervalTime = 1000; // Poll every second
+
+  while (!killSwitch.isActive) {
     try {
       const captionsText = await driver.executeScript(() => {
         const div1 = document.querySelector('div.KcIKyf.jxFHg')?.textContent || '';
@@ -84,41 +114,63 @@ async function startCapturingCaptions(driver: WebDriver, duration: number): Prom
     } catch (error) {
       console.error("Error capturing captions:", (error as Error).message);
     }
-  }, intervalTime);
 
-  await new Promise((resolve) => setTimeout(resolve, duration));
-  clearInterval(interval);
-  console.log("Caption capture completed.");
+    await new Promise((resolve) => setTimeout(resolve, intervalTime)); // Wait before the next iteration
+  }
+
+  console.log("Caption capture terminated by kill switch.");
 }
 
 
-async function startScreenshare(driver: WebDriver, duration: number): Promise<void> {
+
+async function startScreenshare(driver: WebDriver, killSwitch: { isActive: boolean }): Promise<void> {
   console.log("Starting screen sharing...");
   await driver.executeScript(`
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: "browser" },
-      audio: true,
-    });
-    const recorder = new MediaRecorder(stream);
-    const chunks = [];
+    (async () => {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" },
+        audio: true,
+      });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
 
-    recorder.ondataavailable = (e) => chunks.push(e.data);
-    recorder.start();
+      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.start();
 
-    setTimeout(() => recorder.stop(), ${duration}); // Record for the given duration
+      // Stop recording after a signal from the Node.js context
+      window.stopScreenRecording = () => {
+        if (recorder.state === "recording") {
+          recorder.stop();
+        }
+        stream.getTracks().forEach((track) => track.stop());
+      };
 
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "screen_recording.webm";
-      a.click();
-      stream.getTracks().forEach((track) => track.stop());
-    };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "screen_recording.webm";
+        a.click();
+      };
+    })();
   `);
-  console.log("Screen sharing completed.");
+
+  // Monitor the kill switch in the Node.js context
+  while (!killSwitch.isActive) {
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Poll every second
+  }
+
+  console.log("Kill switch activated. Stopping screen recording...");
+  await driver.executeScript(`
+    if (typeof window.stopScreenRecording === 'function') {
+      window.stopScreenRecording();
+    }
+  `);
+
+  console.log("Screen sharing terminated by kill switch.");
 }
+
 
 
 async function processMeetingData(driver: WebDriver): Promise<object> {
@@ -196,14 +248,19 @@ async function summarizeMeetingNotes(filePath: string): Promise<string> {
     throw error;
   }
 }
-
-export async function main(meetLink: string) {
+export async function main(meetLink: string, targetUser: string) {
   const driver = await getChromeDriver();
-  const Duration = 20000; // Duration in milliseconds
 
   try {
     await joinGoogleMeet(driver, meetLink);
-    await startConcurrentTasks(driver, Duration); // Pass the duration
+
+    // Dynamically monitor for the user leaving
+    const userLeftMessage = `${targetUser} has left the meeting`;
+
+    // Start concurrent tasks with dynamic kill switch
+    await startConcurrentTasks(driver, userLeftMessage);
+
+    // Process meeting data after tasks are complete
     const processedData = await processMeetingData(driver);
 
     console.log("Meeting data processed successfully:", processedData);

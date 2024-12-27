@@ -1,25 +1,26 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { main } from './main'; 
+import { main } from './main';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 app.use(cors());
-// Middleware to parse JSON bodies
-app.use(express.json());
+app.use(express.json()); // Middleware to parse JSON bodies
 
+// Endpoint to handle Google Meet workflow
 app.post('/api/open-google-meet', async (req, res) => {
-  const { meetLink } = req.body;
+  const { meetLink, targetUser } = req.body;
 
-  if (!meetLink) {
-    return res.status(400).json({ error: 'Meet link is required' });
+  if (!meetLink || !targetUser) {
+    return res.status(400).json({ error: 'Meet link and target user are required' });
   }
 
   try {
-    await main(meetLink); // Call the main function with the Meet URL
+    await main(meetLink, targetUser); // Call the main function with Meet URL and target user
     res.json({ status: 'success', message: 'Meet workflow completed successfully' });
   } catch (error) {
     console.error('Error in workflow:', error);
