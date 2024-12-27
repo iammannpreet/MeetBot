@@ -1,23 +1,52 @@
 # MeetBot
 
-MeetBot is an automated tool that simplifies Google Meet interactions by joining meetings, handling pop-ups, and recording audio/video streams seamlessly. Built with **Selenium WebDriver** and modern browser APIs, MeetBot automates repetitive tasks, making it ideal for virtual meeting management and content recording.
+MeetBot is an intelligent automation tool designed to streamline interactions in Google Meet. It automates the process of joining meetings, capturing captions, recording screen and audio streams, and processing meeting data for insights. Powered by **Selenium WebDriver**, browser APIs, and the **Hugging Face AI**, MeetBot is a robust solution for managing virtual meetings efficiently.
+
+---
 
 ## Features
 
-- **Automated Meeting Join**: Enters your name and clicks "Ask to join".
-- **Dynamic Pop-Up Handling**: Detects and dismisses the "Got it" safety pop-up.
-- **Screen & Audio Recording**: Combines video and all active audio streams into a single recording.
-- **Downloadable Recordings**: Saves recordings in `webm` format for easy playback.
-- **Customizable Automation**: Adjust window size, recording duration, and screen preferences.
+- **Automated Meeting Participation**:
+  - Joins Google Meet automatically using a provided link.
+  - Fills in a custom bot name and requests to join the meeting.
+  - Handles safety pop-ups like "Got it" seamlessly.
+
+- **Real-Time Captions Capture**:
+  - Captures meeting captions dynamically in real-time.
+  - Monitors the meeting until a specified user leaves.
+
+- **Screen and Audio Recording**:
+  - Records the meeting screen and audio into a `webm` file format.
+  - Saves the recording locally in a designated directory (`public/Videos`).
+
+- **AI-Powered Summaries**:
+  - Processes captured captions to generate concise meeting summaries.
+  - Utilizes Hugging Face's AI models for text summarization.
+
+- **Dynamic Kill Switch**:
+  - Monitors for a specific user’s departure and terminates tasks accordingly.
+  - Ensures tasks like screen recording and caption capture stop gracefully.
+
+---
 
 ## Technologies Used
 
-- **Node.js**: Backend for script execution.
-- **Selenium WebDriver**: Automates browser interactions.
-- **JavaScript MediaRecorder API**: Captures and records screen and audio streams.
-- **Chrome Driver**: Used for running automated tasks in Google Chrome.
+- **Node.js**: Backend for executing automation workflows.
+- **Selenium WebDriver**: Automates browser interactions for joining meetings and capturing content.
+- **JavaScript MediaRecorder API**: Captures and processes screen and audio streams.
+- **Hugging Face AI**: Provides advanced summarization for meeting notes.
+- **ChromeDriver**: Used for running tasks in Google Chrome.
+
+---
 
 ## Installation
+
+### Prerequisites
+
+- Node.js and npm installed on your system.
+- A compatible version of Google Chrome and ChromeDriver.
+
+### Steps
 
 1. **Clone the repository**:
    ```bash
@@ -27,44 +56,104 @@ MeetBot is an automated tool that simplifies Google Meet interactions by joining
 
 2. **Install dependencies**:
    ```bash
-   npm install selenium-webdriver
+   npm install
    ```
 
-3. **Download ChromeDriver**:
-   Ensure you have the correct version of [ChromeDriver](https://chromedriver.chromium.org/downloads) for your installed Chrome browser.
+3. **Set up ChromeDriver**:
+   - Download the correct version of [ChromeDriver](https://chromedriver.chromium.org/downloads) for your Chrome browser.
+   - Place the driver in your system's PATH.
 
-## Usage
+4. **Configure environment variables**:
+   - Create a `.env` file in the root directory.
+   - Add your Hugging Face API key:
+     ```
+     HUGGINGFACE_API_KEY=your_api_key
+     ```
 
-1. **Run the bot**:
-   ```bash
-   node index.js
-   ```
-
-2. **Behavior**:
-   - The bot will open the Google Meet link.
-   - Fill in "Meeting bot" as the name and request to join.
-   - Start recording your screen and audio.
-   - Automatically handle pop-ups during recording.
-   - Save the recording as a downloadable `RecordedScreenWithAudio.webm` file.
-
-## Configuration
-
-Adjust settings like screen size, recording duration, or Meet URL in the script:
-```javascript
-options.addArguments("--window-size=1080,720");
-await driver.get('https://meet.google.com/your-meet-code');
-```
-
-## Use Cases
-
-- **Automated Meeting Recordings**: Save important meetings for future review.
-- **Virtual Assistant**: Handle repetitive Google Meet interactions effortlessly.
-- **Content Archival**: Archive video/audio content from virtual sessions.
-
-## Disclaimer
-
-This project is intended for educational and personal use. Ensure you comply with Google Meet’s terms of service and privacy guidelines.
+5. **Ensure directories exist**:
+   - The bot will save recordings in `public/Videos`. Ensure this directory exists or will be created automatically.
 
 ---
 
-**Contributions** are welcome! Fork the project and submit a PR.
+## Usage
+
+### Running the Server
+
+1. **Start the server**:
+   ```bash
+   npm run dev
+   ```
+
+2. **Endpoint for Meet Automation**:
+   - Send a `POST` request to the `/api/open-google-meet` endpoint with the following JSON body:
+     ```json
+     {
+       "meetLink": "https://meet.google.com/your-meeting-link",
+       "targetUser": "John Doe"
+     }
+     ```
+   - The `targetUser` specifies the name of the participant whose departure triggers the automation to stop.
+
+---
+
+## How It Works
+
+1. **Meeting Workflow**:
+   - The bot navigates to the Google Meet link and fills in a bot name.
+   - It requests to join the meeting and handles pop-ups.
+   - Starts capturing captions and recording the screen/audio.
+
+2. **Dynamic Monitoring**:
+   - Continuously checks if the specified user (`targetUser`) has left the meeting.
+   - Stops all tasks (recording, caption capturing) once the user leaves.
+
+3. **Data Processing**:
+   - Captured captions are saved in a structured JSON format.
+   - Hugging Face's AI generates a concise summary of the meeting.
+   - All recordings and processed data are stored locally for review.
+
+---
+
+## Configuration
+
+You can adjust settings like screen size, recording preferences, or meeting link dynamically. For example:
+```typescript
+await driver.manage().window().setRect({ width: 1080, height: 720 });
+await driver.get('https://meet.google.com/your-meet-code');
+```
+
+---
+
+## Use Cases
+
+- **Meeting Archival**:
+  - Automatically record and archive important meetings for future reference.
+- **Productivity Booster**:
+  - Generate actionable summaries to reduce the need for manual note-taking.
+- **Virtual Assistant**:
+  - Manage repetitive Google Meet interactions seamlessly.
+
+---
+
+## Output Files
+
+1. **Captions JSON**:
+   - Stored in the root directory as `captions.json`.
+   - Includes a predefined heading for summarization and structured captions.
+
+2. **Meeting Summary**:
+   - Generated by Hugging Face AI and saved as `summary.txt`.
+
+3. **Screen Recording**:
+   - Saved as `public/Videos/screen_recording.webm`.
+
+---
+
+## Disclaimer
+
+MeetBot is intended for personal and educational use. Ensure compliance with Google Meet’s terms of service and obtain necessary permissions before recording or automating interactions.
+
+---
+
+**Contributions**:
+We welcome contributions! Fork the repository, submit issues, and create pull requests to improve MeetBot further. 🚀
