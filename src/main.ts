@@ -48,6 +48,7 @@ async function joinGoogleMeet(driver: WebDriver, meetLink: string) {
     throw error;
   }
 }
+
 async function monitorForKillSwitch(driver: WebDriver, userLeftMessage: string, killSwitch: { isActive: boolean }) {
   console.log(`Monitoring for "${userLeftMessage}" to act as a kill switch...`);
 
@@ -65,11 +66,9 @@ async function monitorForKillSwitch(driver: WebDriver, userLeftMessage: string, 
     } catch (error) {
       console.error("Error while monitoring for kill switch:", (error as Error).message);
     }
-
     await new Promise((resolve) => setTimeout(resolve, 1000)); // Check every second
   }
 }
-
 
 async function startConcurrentTasks(driver: WebDriver, userLeftMessage: string) {
   console.log("Starting concurrent tasks: screen sharing and caption capture...");
@@ -91,11 +90,11 @@ async function startConcurrentTasks(driver: WebDriver, userLeftMessage: string) 
   console.log("Concurrent tasks stopped by kill switch.");
 }
 
-
 async function startCapturingCaptions(driver: WebDriver, killSwitch: { isActive: boolean }): Promise<void> {
   console.log("Starting caption capture...");
-  const intervalTime = 1000; // Poll every second
 
+  const intervalTime = 500; // Poll every second
+  const buffer = [];
   while (!killSwitch.isActive) {
     try {
       const captionsText = await driver.executeScript(() => {
@@ -103,14 +102,20 @@ async function startCapturingCaptions(driver: WebDriver, killSwitch: { isActive:
         const div2 = document.querySelector('div[jsname="tgaKEf"] span')?.textContent || '';
         return { div1, div2 };
       }) as CaptionsText;
-
+      if (captionsText.div2) {
+        buffer.push(`${captionsText.div1}: ${captionsText.div2}`);
+      }
       const combinedText = `${captionsText.div1}: ${captionsText.div2}`.trim();
 
+    // Combine and save buffered captions every 5 seconds
+    if (buffer.length > 0 && buffer.length % 10 === 0) {
+      const combinedText = buffer.join(' ').trim();
       if (combinedText && combinedText !== lastLoggedText) {
         logs.push({ timestamp: new Date().toISOString(), combined: combinedText });
         lastLoggedText = combinedText;
-        console.log("Captured:", combinedText);
       }
+      buffer.length = 0; // Clear the buffer
+    }
     } catch (error) {
       console.error("Error capturing captions:", (error as Error).message);
     }
@@ -120,8 +125,6 @@ async function startCapturingCaptions(driver: WebDriver, killSwitch: { isActive:
 
   console.log("Caption capture terminated by kill switch.");
 }
-
-
 
 async function startScreenshare(driver: WebDriver, killSwitch: { isActive: boolean }): Promise<void> {
   console.log("Starting screen sharing...");
@@ -171,8 +174,6 @@ async function startScreenshare(driver: WebDriver, killSwitch: { isActive: boole
   console.log("Screen sharing terminated by kill switch.");
 }
 
-
-
 async function processMeetingData(driver: WebDriver): Promise<object> {
   try {
     console.log("Processing meeting data...");
@@ -214,7 +215,6 @@ function saveLogsToJson(): string {
   return filePath;
 }
 
-
 async function summarizeMeetingNotes(filePath: string): Promise<string> {
   try {
     console.log("Sending captions to Hugging Face for summarization...");
@@ -248,6 +248,7 @@ async function summarizeMeetingNotes(filePath: string): Promise<string> {
     throw error;
   }
 }
+
 export async function main(meetLink: string, targetUser: string) {
   const driver = await getChromeDriver();
 
