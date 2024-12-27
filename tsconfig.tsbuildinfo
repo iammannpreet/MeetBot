@@ -1,1 +1,1 @@
-{"root":["./src/main.ts","./src/server.ts","./src/drivers/chromedriver.ts","./src/modules/captions.ts","./src/modules/meetjoin.ts","./src/modules/monitor.ts","./src/modules/processdata.ts","./src/modules/screenshare.ts","./src/utils/filehandler.ts","./src/utils/logger.ts"],"version":"5.7.2"}
+{"root":["./src/main.ts","./src/server.ts","./src/drivers/chromedriver.ts","./src/modules/killswitch.ts","./src/modules/meetjoin.ts","./src/modules/startscreenshare.ts"],"version":"5.7.2"}

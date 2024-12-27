@@ -3,8 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { HfInference } from '@huggingface/inference';
-import { By, until, WebDriver } from 'selenium-webdriver';
+import { WebDriver } from 'selenium-webdriver';
 import { joinGoogleMeet } from './modules/meetJoin';
+import { monitorForKillSwitch } from './modules/killSwitch';
+import { startScreenshare } from './modules/startScreenshare';
 
 dotenv.config();
 interface CaptionsText {
@@ -18,26 +20,6 @@ const client = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
 let lastLoggedText: string | null = null;
 const logs: { timestamp: string; combined: string }[] = []; // Store captured captions
 
-async function monitorForKillSwitch(driver: WebDriver, userLeftMessage: string, killSwitch: { isActive: boolean }) {
-  console.log(`Monitoring for "${userLeftMessage}" to act as a kill switch...`);
-
-  while (!killSwitch.isActive) {
-    try {
-      const pageText = await driver.executeScript(() => {
-        return document.body.textContent || ''; // Fetch all visible text on the page
-      }) as string; // Explicitly cast to string
-
-      if (pageText.includes(userLeftMessage)) {
-        console.log(`Kill switch triggered: "${userLeftMessage}" detected.`);
-        killSwitch.isActive = true; // Activate the kill switch
-        break;
-      }
-    } catch (error) {
-      console.error("Error while monitoring for kill switch:", (error as Error).message);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Check every second
-  }
-}
 
 async function startConcurrentTasks(driver: WebDriver, userLeftMessage: string) {
   console.log("Starting concurrent tasks: screen sharing and caption capture...");
@@ -95,53 +77,6 @@ async function startCapturingCaptions(driver: WebDriver, killSwitch: { isActive:
   console.log("Caption capture terminated by kill switch.");
 }
 
-async function startScreenshare(driver: WebDriver, killSwitch: { isActive: boolean }): Promise<void> {
-  console.log("Starting screen sharing...");
-  await driver.executeScript(`
-    (async () => {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { displaySurface: "browser" },
-        audio: true,
-      });
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-
-      recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.start();
-
-      // Stop recording after a signal from the Node.js context
-      window.stopScreenRecording = () => {
-        if (recorder.state === "recording") {
-          recorder.stop();
-        }
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "video/webm" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "screen_recording.webm";
-        a.click();
-      };
-    })();
-  `);
-
-  // Monitor the kill switch in the Node.js context
-  while (!killSwitch.isActive) {
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Poll every second
-  }
-
-  console.log("Kill switch activated. Stopping screen recording...");
-  await driver.executeScript(`
-    if (typeof window.stopScreenRecording === 'function') {
-      window.stopScreenRecording();
-    }
-  `);
-
-  console.log("Screen sharing terminated by kill switch.");
-}
 
 async function processMeetingData(driver: WebDriver): Promise<object> {
   try {
