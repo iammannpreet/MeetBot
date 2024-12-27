@@ -4,6 +4,7 @@ import path from 'path';
 import * as dotenv from 'dotenv';
 import { HfInference } from '@huggingface/inference';
 import { By, until, WebDriver } from 'selenium-webdriver';
+import { joinGoogleMeet } from './modules/meetJoin';
 
 dotenv.config();
 interface CaptionsText {
@@ -16,38 +17,6 @@ const client = new HfInference(process.env.HUGGINGFACE_API_KEY as string);
 
 let lastLoggedText: string | null = null;
 const logs: { timestamp: string; combined: string }[] = []; // Store captured captions
-
-async function joinGoogleMeet(driver: WebDriver, meetLink: string) {
-  try {
-    console.log("Navigating to Google Meet...");
-    await driver.get(meetLink);
-
-    // Handle initial popups
-    const gotItButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 10000);
-    await gotItButton.click();
-
-    // Enter bot's name
-    const nameInput = await driver.wait(until.elementLocated(By.xpath('//input[@placeholder="Your name"]')), 10000);
-    await nameInput.clear();
-    await nameInput.sendKeys("Mann's Meeting bot");
-
-    // Click "Ask to join"
-    const askToJoinButton = await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Ask to join")]')), 5000);
-    await askToJoinButton.click();
-
-    // Wait for admission into the meeting (max 10 mins)
-    console.log("Waiting for admission...");
-    const GotItButton =await driver.wait(until.elementLocated(By.xpath('//span[contains(text(), "Got it")]')), 600000);
-    console.log("Admitted to the meeting.");
-    await GotItButton.click();
-    const ccButton = driver.wait(until.elementLocated(By.css('button[jsname="r8qRAd"]')), 1000);
-    await ccButton.click();
-    console.log("Capturing Captions enabled.");
-  } catch (error) {
-    console.error("Error in joinGoogleMeet:", (error as Error).message);
-    throw error;
-  }
-}
 
 async function monitorForKillSwitch(driver: WebDriver, userLeftMessage: string, killSwitch: { isActive: boolean }) {
   console.log(`Monitoring for "${userLeftMessage}" to act as a kill switch...`);
@@ -253,6 +222,7 @@ export async function main(meetLink: string, targetUser: string) {
   const driver = await getChromeDriver();
 
   try {
+    // Use the imported joinGoogleMeet function
     await joinGoogleMeet(driver, meetLink);
 
     // Dynamically monitor for the user leaving
@@ -269,5 +239,6 @@ export async function main(meetLink: string, targetUser: string) {
     console.error("Error in MeetBot:", (error as Error).message);
   } finally {
     console.log("Driver closed.");
+    await driver.quit();
   }
 }
