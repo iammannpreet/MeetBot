@@ -1,6 +1,4 @@
-import express, { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
+import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { main } from './main';
@@ -25,14 +23,12 @@ app.post('/api/open-google-meet', async (req, res) => {
     await main(meetLink, targetUser); // Call the main function with Meet URL and target user
     res.json({ status: 'success', message: 'Meet workflow completed successfully' });
   } catch (error) {
-    console.error('Error saving recording:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    res.status(500).send({ error: 'Failed to save recording', details: errorMessage });
+    console.error('Error in workflow:', error);
+    res.status(500).json({ error: 'Failed to process Meet workflow', details: (error as Error).message });
   }
 });
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
-  console.log(`Output directory: ${OUTPUT_DIR}`);
 });
